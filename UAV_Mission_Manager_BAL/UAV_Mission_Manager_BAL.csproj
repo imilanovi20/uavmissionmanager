@@ -1,0 +1,25 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />
+    <PackageReference Include="Portable.BouncyCastle" Version="1.9.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\UAV_Mission_Manager_DAL\UAV_Mission_Manager_DAL.csproj" />
+    <ProjectReference Include="..\UAV_Mission_Manager_DTO\UAV_Mission_Manager_DTO.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Services\NewFolder\" />
+  </ItemGroup>
+
+</Project>
