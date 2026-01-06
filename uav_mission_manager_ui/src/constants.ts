@@ -1,0 +1,1 @@
+export var pathAPI = 'https://localhost:7000/api';
