@@ -11,6 +11,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using UAV_Mission_Manager_BAL.Services.AdditionalEquipmentService;
 using UAV_Mission_Manager_BAL.Services.UAVService;
+using UAV_Mission_Manager_BAL.Services.MissionService;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -25,6 +26,8 @@ builder.Services.AddScoped<IReadOnlyRepository<UserRole>, ReadOnlyRepository<Use
 builder.Services.AddScoped<IRepository<AdditionalEquipment>, Repository<AdditionalEquipment>>();
 builder.Services.AddScoped<IRepository<UAV>, Repository<UAV>>();
 builder.Services.AddScoped<IRepository<UAV_AdditionalEquipment>, Repository<UAV_AdditionalEquipment>>();
+builder.Services.AddScoped<IRepository<Mission>, Repository<Mission>>();
+builder.Services.AddScoped<IRepository<Mission>, Repository<Mission>>();
 
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IPasswordService, PasswordService>();
@@ -32,6 +35,7 @@ builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<IAdditionalEquipmentService, AdditionalEquipmentService>();
 builder.Services.AddScoped<IUAVService, UAVService>();
+builder.Services.AddScoped<IMissionService, MissionService>();
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
