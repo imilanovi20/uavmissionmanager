@@ -18,8 +18,4 @@
     <ProjectReference Include="..\UAV_Mission_Manager_DTO\UAV_Mission_Manager_DTO.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Services\NewFolder\" />
-  </ItemGroup>
-
 </Project>
