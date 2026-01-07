@@ -10,6 +10,8 @@ namespace UAV_Mission_Manager_DTO.Models.Mission
     public class CreateMissionDto
     {
         public string Name { get; set; }
+        public double LocationLat { get; set; }
+        public double LocationLon { get; set; }
         public DateTime Date { get; set; }
         public string Description { get; set; }
         public WeatherDataDto weatherData { get; set; }

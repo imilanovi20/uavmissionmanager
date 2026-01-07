@@ -11,6 +11,8 @@ namespace UAV_Mission_Manager_DAL.Entities
     public class Mission
     {
         public int Id { get; set; }
+        public double LocationLat { get; set; }
+        public double LocationLon { get; set; }
         public string Name { get; set; }
         public DateTime Date { get; set; }
         public string Description { get; set; }

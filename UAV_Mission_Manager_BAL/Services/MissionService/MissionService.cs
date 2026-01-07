@@ -11,6 +11,7 @@ using UAV_Mission_Manager_DTO.Models.AdditionalEquipment;
 using Microsoft.EntityFrameworkCore;
 using System.Reflection;
 using UAV_Mission_Manager_DTO.Models.WeatherData;
+using UAV_Mission_Manager_BAL.Services.WeatherService;
 
 namespace UAV_Mission_Manager_BAL.Services.MissionService
 {
@@ -18,10 +19,12 @@ namespace UAV_Mission_Manager_BAL.Services.MissionService
     {
         private readonly IRepository<Mission> _missionRepository;
         private readonly IRepository<WeatherData> _weatherDataRepository;
-        public MissionService(IRepository<Mission> missionRepository, IRepository<WeatherData> weatherDataRepository)
+        private readonly IWeatherService _weatherService;
+        public MissionService(IRepository<Mission> missionRepository, IRepository<WeatherData> weatherDataRepository, IWeatherService weatherService)
         {
             _missionRepository = missionRepository;
             _weatherDataRepository = weatherDataRepository;
+            _weatherService = weatherService;
         }
         public async Task<CreateMissionResponseDto> CreateMissionAsync(CreateMissionDto createMissionDto)
         {
@@ -64,6 +67,8 @@ namespace UAV_Mission_Manager_BAL.Services.MissionService
             var mission = new Mission
             {
                 Name = createMissionDto.Name,
+                LocationLat = createMissionDto.LocationLat,
+                LocationLon = createMissionDto.LocationLon,
                 Date = createMissionDto.Date,
                 Description = createMissionDto.Description,
                 CreatedAt = DateTime.UtcNow
@@ -114,12 +119,81 @@ namespace UAV_Mission_Manager_BAL.Services.MissionService
             throw new NotImplementedException();
         }
 
+        public async Task<UpdateWeatherDto> UpdateWeatherForMissionAsync(int missionId)
+        {
+            try
+            {
+                var mission = await _missionRepository.GetAll()
+                    .Include(m => m.WeatherData)
+                    .FirstOrDefaultAsync(m => m.Id == missionId);
+
+                if (mission == null)
+                {
+                    return new UpdateWeatherDto
+                    {
+                        WetherData = null,
+                        Response = $"Mission with ID {missionId} not found"
+                    };
+                }
+
+                var newWeatherData = await _weatherService.GetWeatherForecastAsync(
+                    mission.Date,
+                    mission.LocationLat,
+                    mission.LocationLon
+                );
+
+                if (mission.WeatherData != null)
+                {
+                    mission.WeatherData.Temperature = newWeatherData.Temperature;
+                    mission.WeatherData.WindSpeed = newWeatherData.WindSpeed;
+                    mission.WeatherData.WindDirection = newWeatherData.WindDirection;
+                    mission.WeatherData.IsSafeForFlight = newWeatherData.IsSafeForFlight;
+                    mission.WeatherData.FetchedAt = DateTime.UtcNow;
+                    mission.WeatherData.WeatherCode = newWeatherData.WeatherCode;
+
+                    _weatherDataRepository.Update(mission.WeatherData);
+                }
+                else
+                {
+                    var weatherData = new WeatherData
+                    {
+                        MissionId = mission.Id,
+                        Temperature = newWeatherData.Temperature,
+                        WindSpeed = newWeatherData.WindSpeed,
+                        WindDirection = newWeatherData.WindDirection,
+                        IsSafeForFlight = newWeatherData.IsSafeForFlight,
+                        FetchedAt = DateTime.UtcNow,
+                        WeatherCode = newWeatherData.WeatherCode
+                    };
+
+                    _weatherDataRepository.Add(weatherData);
+                }
+
+                await _weatherDataRepository.SaveAsync();
+
+                return new UpdateWeatherDto
+                {
+                    WetherData = newWeatherData,
+                    Response = "Weather data updated successfully"
+                };
+            }
+            catch (Exception ex)
+            {
+                return new UpdateWeatherDto
+                {
+                    Response = $"Failed to update weather data: {ex.Message}"
+                };
+            }
+        }
+
         private MissionDto MapToDto(Mission mission)
         {
             return new MissionDto
             {
                 Id = mission.Id,
                 Name = mission.Name,
+                LocationLat = mission.LocationLat,
+                LocationLon = mission.LocationLon,
                 Date = mission.Date,
                 Description = mission.Description,
                 CreatedAt = mission.CreatedAt,

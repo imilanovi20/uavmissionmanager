@@ -80,5 +80,32 @@ namespace UAV_Mission_Manager_API.Controllers
                 return StatusCode(500, ex.Message);
             }
         }
+
+        [HttpPut("{id}/updateweather")]
+        public async Task<IActionResult> UpdateWeatherForMission(int id)
+        {
+            try
+            {
+                var result = await _missionService.UpdateWeatherForMissionAsync(id);
+
+                if (result.WetherData != null)
+                {
+                    return Ok(result);
+                }
+
+                return StatusCode(500, result.Response);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new
+                {
+                    message = "Access denied"
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+        }
     }
 }
