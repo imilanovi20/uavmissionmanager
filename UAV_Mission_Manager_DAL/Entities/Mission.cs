@@ -20,7 +20,7 @@ namespace UAV_Mission_Manager_DAL.Entities
         // public ICollection<MissionUAV> MissionUAVs { get; set; } = new List<MissionUAV>();
         // public ICollection<MissionUser> MissionUsers { get; set; } = new List<MissionUser>();
         // public ICollection<Waypoint> Waypoints { get; set; } = new List<Waypoint>();
-        // public WeatherData WeatherData { get; set; }
+        public WeatherData WeatherData { get; set; }
     }
 
     public class MissionConfigurationBuilder : IEntityTypeConfiguration<Mission>
@@ -44,6 +44,12 @@ namespace UAV_Mission_Manager_DAL.Entities
 
             builder.Property(m => m.CreatedAt)
                    .IsRequired();
+
+            builder.HasOne(m => m.WeatherData)
+                   .WithOne(wd => wd.Mission)
+                   .HasForeignKey<WeatherData>(wd => wd.MissionId)
+                   .IsRequired(false)
+                   .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

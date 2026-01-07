@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using UAV_Mission_Manager_DAL;
 
@@ -11,9 +12,11 @@ using UAV_Mission_Manager_DAL;
 namespace UAV_Mission_Manager_DAL.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260107162935_AddWeatehrDataForMission")]
+    partial class AddWeatehrDataForMission
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -194,8 +197,17 @@ namespace UAV_Mission_Manager_DAL.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("Conditions")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
                     b.Property<DateTime>("FetchedAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<double>("Humidity")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("float(5)");
 
                     b.Property<bool>("IsSafeForFlight")
                         .HasColumnType("bit");
@@ -206,6 +218,10 @@ namespace UAV_Mission_Manager_DAL.Migrations
                     b.Property<double>("Temperature")
                         .HasPrecision(5, 2)
                         .HasColumnType("float(5)");
+
+                    b.Property<double>("Visibility")
+                        .HasPrecision(6, 2)
+                        .HasColumnType("float(6)");
 
                     b.Property<int>("WeatherCode")
                         .HasColumnType("int");
