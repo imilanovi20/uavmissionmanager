@@ -12,5 +12,7 @@ namespace UAV_Mission_Manager_BAL.Services.MissionService
     {
         Task<CreateMissionResponseDto> CreateMissionAsync(CreateMissionDto createMissionDto);
         Task<MissionDto> GetMissionByIdAsync(int id);
+        Task<IEnumerable<MissionDto>> GetAllMissionsAsync();
+        Task<IEnumerable<MissionDto>> GetUserMissionsAsync();
     }
 }
