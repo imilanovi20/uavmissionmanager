@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using UAV_Mission_Manager_DTO.Models.Mission;
 using UAV_Mission_Manager_DTO.Models.UAV;
+using UAV_Mission_Manager_DTO.Models.WeatherData;
 
 namespace UAV_Mission_Manager_BAL.Services.MissionService
 {
@@ -14,5 +15,6 @@ namespace UAV_Mission_Manager_BAL.Services.MissionService
         Task<MissionDto> GetMissionByIdAsync(int id);
         Task<IEnumerable<MissionDto>> GetAllMissionsAsync();
         Task<IEnumerable<MissionDto>> GetUserMissionsAsync();
+        Task<UpdateWeatherDto> UpdateWeatherForMissionAsync(int missionId);
     }
 }
