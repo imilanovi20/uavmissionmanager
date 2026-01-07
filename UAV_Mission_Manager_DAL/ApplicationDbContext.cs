@@ -20,6 +20,8 @@ namespace UAV_Mission_Manager_DAL
         public DbSet<UAV_AdditionalEquipment> UAV_AdditionalEquipments { get; set; }
         public DbSet<Mission> Missions { get; set; }
         public DbSet<WeatherData> WeatherData { get; set; }
+        public DbSet<MissionUAV> MissionUAVs { get; set; }
+        public DbSet<MissionUser> MissionUsers { get; set; }
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)

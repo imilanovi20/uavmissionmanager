@@ -18,6 +18,7 @@ namespace UAV_Mission_Manager_DAL.Entities
         public decimal Weight { get; set; }
         public string ImagePath { get; set; }
         public ICollection<UAV_AdditionalEquipment> UAV_AdditionalEquipments { get; set; } = new List<UAV_AdditionalEquipment>();
+        public ICollection<MissionUAV> MissionUAVs { get; set; } = new List<MissionUAV>();
     }
 
     public class UAVConfigurationBuilder : IEntityTypeConfiguration<UAV>
