@@ -12,6 +12,8 @@ using Microsoft.EntityFrameworkCore;
 using System.Reflection;
 using UAV_Mission_Manager_DTO.Models.WeatherData;
 using UAV_Mission_Manager_BAL.Services.WeatherService;
+using Microsoft.EntityFrameworkCore.Storage;
+using UAV_Mission_Manager_DTO.Models.User;
 
 namespace UAV_Mission_Manager_BAL.Services.MissionService
 {
@@ -19,46 +21,80 @@ namespace UAV_Mission_Manager_BAL.Services.MissionService
     {
         private readonly IRepository<Mission> _missionRepository;
         private readonly IRepository<WeatherData> _weatherDataRepository;
+        private readonly IRepository<UAV> _uavRepository;
+        private readonly IRepository<User> _userRepository;
+        private readonly IRepository<MissionUAV> _missionUAVRepository;
+        private readonly IRepository<MissionUser> _missionUserRepository;
         private readonly IWeatherService _weatherService;
-        public MissionService(IRepository<Mission> missionRepository, IRepository<WeatherData> weatherDataRepository, IWeatherService weatherService)
+        private readonly ApplicationDbContext _context;
+        public MissionService(
+            IRepository<Mission> missionRepository,
+            IRepository<WeatherData> weatherDataRepository,
+            IRepository<UAV> uavRepository,
+            IRepository<User> userRepository,
+            IRepository<MissionUAV> missionUAVRepository,
+            IRepository<MissionUser> missionUserRepository,
+            IWeatherService weatherService,
+            ApplicationDbContext context)
         {
             _missionRepository = missionRepository;
             _weatherDataRepository = weatherDataRepository;
+            _uavRepository = uavRepository;
+            _userRepository = userRepository;
+            _missionUAVRepository = missionUAVRepository;
+            _missionUserRepository = missionUserRepository;
             _weatherService = weatherService;
+            _context = context;
         }
         public async Task<CreateMissionResponseDto> CreateMissionAsync(CreateMissionDto createMissionDto)
         {
+            IDbContextTransaction transaction = null;
             try
             {
+                transaction = await _context.Database.BeginTransactionAsync();
+
                 Mission mission = await SaveMission(createMissionDto);
-                try
+                await AddWeatherData(createMissionDto, mission);
+
+                if (createMissionDto.UAVIds != null && createMissionDto.UAVIds.Any())
                 {
-                    await SaveWeatherData(createMissionDto, mission);
-                }
-                catch (Exception e)
-                {
-                    return new CreateMissionResponseDto
-                    {
-                        Mission = null,
-                        Response = "Failed to fetch weather data for mission: + " + e
-                    };
+                    await AddUAVsToMission(mission.Id, createMissionDto.UAVIds);
                 }
 
-                CreateMissionResponseDto response = new CreateMissionResponseDto
+                if (createMissionDto.ResponsibleUsers != null && createMissionDto.ResponsibleUsers.Any())
                 {
-                    Mission = await GetMissionByIdAsync(mission.Id),
-                    Response = "Mission Created Successfully"
+                    await AddResponsibleUsers(mission.Id, createMissionDto.ResponsibleUsers);
+                }
+
+                await transaction.CommitAsync();
+                _context.ChangeTracker.Clear();
+                var missionDto = await GetMissionByIdAsync(mission.Id);
+
+                return new CreateMissionResponseDto
+                {
+                    Mission = missionDto,
+                    Response = "Mission created successfully"
                 };
-                return response;
-
             }
-            catch (Exception e)
+            catch (Exception ex)
             {
+                if (transaction != null)
+                {
+                    await transaction.RollbackAsync();
+                }
+
                 return new CreateMissionResponseDto
                 {
                     Mission = null,
-                    Response = "Faild to create mission: + " + e
+                    Response = $"Failed to create mission: {ex.Message}"
                 };
+            }
+            finally
+            {
+                if (transaction != null)
+                {
+                    await transaction.DisposeAsync();
+                }
             }
         }
 
@@ -79,9 +115,9 @@ namespace UAV_Mission_Manager_BAL.Services.MissionService
             return mission;
         }
 
-        private async Task SaveWeatherData(CreateMissionDto createMissionDto, Mission mission)
+        private async Task AddWeatherData(CreateMissionDto createMissionDto, Mission mission)
         {
-            var weatherDataDto = createMissionDto.weatherData;
+            var weatherDataDto = createMissionDto.WeatherData;
             var weatherData = new WeatherData
             {
                 MissionId = mission.Id,
@@ -89,17 +125,65 @@ namespace UAV_Mission_Manager_BAL.Services.MissionService
                 WindSpeed = weatherDataDto.WindSpeed,
                 WindDirection = weatherDataDto.WindDirection,
                 IsSafeForFlight = weatherDataDto.IsSafeForFlight,
-                FetchedAt = weatherDataDto.FetchedAt
+                FetchedAt = weatherDataDto.FetchedAt,
+                WeatherCode = weatherDataDto.WeatherCode
             };
 
             _weatherDataRepository.Add(weatherData);
             await _weatherDataRepository.SaveAsync();
         }
 
+        private async Task AddUAVsToMission(int missionId, List<int> uavIds)
+        {
+            foreach (var uavId in uavIds)
+            {
+                var uavExists = await _uavRepository.GetAll()
+                    .AnyAsync(u => u.Id == uavId);
+
+                if (!uavExists)
+                {
+                    throw new Exception($"UAV with ID {uavId} not found");
+                }
+                var missionUAV = new MissionUAV
+                {
+                    MissionId = missionId,
+                    UAVId = uavId
+                };
+
+                _missionUAVRepository.Add(missionUAV);
+            }
+
+            await _missionUAVRepository.SaveAsync();
+        }
+
+        private async Task AddResponsibleUsers(int missionId, List<string> usernames)
+        {
+            foreach (var username in usernames)
+            {
+                var userExists = await _userRepository.GetAll()
+                    .AnyAsync(u => u.Username == username);
+
+                if (!userExists)
+                {
+                    throw new Exception($"User with username '{username}' not found");
+                }
+
+                var missionUser = new MissionUser
+                {
+                    MissionId = missionId,
+                    Username = username
+                };
+
+                _missionUserRepository.Add(missionUser);
+            }
+
+            await _missionUserRepository.SaveAsync();
+        }
+
         public async Task<IEnumerable<MissionDto>> GetAllMissionsAsync()
         {
             var missions = await _missionRepository.GetAll()
-                .Include(m => m.WeatherData)  
+                .Include(m => m.WeatherData)
                 .ToListAsync();
 
             return missions.Select(MapToDto);
@@ -108,7 +192,14 @@ namespace UAV_Mission_Manager_BAL.Services.MissionService
         public async Task<MissionDto> GetMissionByIdAsync(int id)
         {
             var mission = await _missionRepository.GetAll()
-                .Include(m => m.WeatherData) 
+                .Include(m => m.WeatherData)
+                .Include(m => m.MissionUAVs)
+                    .ThenInclude(mu => mu.UAV)
+                        .ThenInclude(u => u.UAV_AdditionalEquipments)
+                            .ThenInclude(uae => uae.AdditionalEquipment)
+                .Include(m => m.MissionUsers)
+                    .ThenInclude(mu => mu.User)
+                        .ThenInclude(u => u.UserRole)
                 .FirstOrDefaultAsync(m => m.Id == id);
 
             return mission != null ? MapToDto(mission) : null;
@@ -197,9 +288,21 @@ namespace UAV_Mission_Manager_BAL.Services.MissionService
                 Date = mission.Date,
                 Description = mission.Description,
                 CreatedAt = mission.CreatedAt,
+
+                // Weather data
                 WeatherData = mission.WeatherData != null
                     ? MapWeatherToDto(mission.WeatherData)
-                    : null
+                    : null,
+
+                // UAVs
+                UAVs = mission.MissionUAVs?
+                    .Select(mu => MapUAVToDto(mu.UAV))
+                    .ToList() ?? new List<UAVDto>(),
+
+                // Responsible users
+                ResponsibleUsers = mission.MissionUsers?
+                    .Select(mu => MapUserToDto(mu.User))
+                    .ToList() ?? new List<UserDto>()
             };
         }
 
@@ -214,6 +317,44 @@ namespace UAV_Mission_Manager_BAL.Services.MissionService
                 IsSafeForFlight = weatherData.IsSafeForFlight,
                 FetchedAt = weatherData.FetchedAt,
                 WeatherCode = weatherData.WeatherCode
+            };
+        }
+
+        private UAVDto MapUAVToDto(UAV uav)
+        {
+            return new UAVDto
+            {
+                Id = uav.Id,
+                Name = uav.Name,
+                Type = uav.Type,
+                MaxSpeed = uav.MaxSpeed,
+                FlightTime = uav.FlightTime,
+                Weight = uav.Weight,
+                ImagePath = uav.ImagePath,
+                AdditionalEquipments = uav.UAV_AdditionalEquipments?
+                    .Select(uae => new AdditionalEquipmentDto
+                    {
+                        Id = uae.AdditionalEquipment.Id,
+                        Type = uae.AdditionalEquipment.Type,
+                        Name = uae.AdditionalEquipment.Name,
+                        Weight = uae.AdditionalEquipment.Weight,
+                        Description = uae.AdditionalEquipment.Description,
+                        ImagePath = uae.AdditionalEquipment.ImagePath
+                    })
+                    .ToList() ?? new List<AdditionalEquipmentDto>()
+            };
+        }
+
+        private UserDto MapUserToDto(User user)
+        {
+            return new UserDto
+            {
+                Username = user.Username,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                Email = user.Email,
+                ImagePath = user.ImagePath,
+                Role = user.UserRole?.Name ?? "Unknown"
             };
         }
     }

@@ -14,6 +14,10 @@ namespace UAV_Mission_Manager_DTO.Models.Mission
         public double LocationLon { get; set; }
         public DateTime Date { get; set; }
         public string Description { get; set; }
-        public WeatherDataDto weatherData { get; set; }
+        public CreateWeatherDataDto WeatherData { get; set; }
+
+        public List<int> UAVIds { get; set; } = new List<int>();
+
+        public List<string> ResponsibleUsers { get; set; } = new List<string>();
     }
 }

@@ -20,6 +20,7 @@ namespace UAV_Mission_Manager_DAL.Entities
         public string ImagePath { get; set; }
         public int UserRoleId { get; set; }
         public UserRole UserRole { get; set; }
+        public ICollection<MissionUser> MissionUsers { get; set; } = new List<MissionUser>();
     }
 
     public class UserConfigurationBuilder : IEntityTypeConfiguration<User>
