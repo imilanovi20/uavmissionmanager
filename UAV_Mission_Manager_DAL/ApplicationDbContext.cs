@@ -22,6 +22,8 @@ namespace UAV_Mission_Manager_DAL
         public DbSet<WeatherData> WeatherData { get; set; }
         public DbSet<MissionUAV> MissionUAVs { get; set; }
         public DbSet<MissionUser> MissionUsers { get; set; }
+        public DbSet<TaskInMission> Tasks { get; set; }
+        public DbSet<Waypoint> Waypoints { get; set; }
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
