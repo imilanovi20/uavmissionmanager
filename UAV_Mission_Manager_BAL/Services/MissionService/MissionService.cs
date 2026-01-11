@@ -1,19 +1,22 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
-using UAV_Mission_Manager_DAL.Entities;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
+using UAV_Mission_Manager_BAL.Services.TaskService;
+using UAV_Mission_Manager_BAL.Services.WaypointService;
+using UAV_Mission_Manager_BAL.Services.WeatherService;
 using UAV_Mission_Manager_DAL;
+using UAV_Mission_Manager_DAL.Entities;
+using UAV_Mission_Manager_DTO.Models.AdditionalEquipment;
 using UAV_Mission_Manager_DTO.Models.Mission;
 using UAV_Mission_Manager_DTO.Models.UAV;
-using UAV_Mission_Manager_DTO.Models.AdditionalEquipment;
-using Microsoft.EntityFrameworkCore;
-using System.Reflection;
-using UAV_Mission_Manager_DTO.Models.WeatherData;
-using UAV_Mission_Manager_BAL.Services.WeatherService;
-using Microsoft.EntityFrameworkCore.Storage;
 using UAV_Mission_Manager_DTO.Models.User;
+using UAV_Mission_Manager_DTO.Models.Waypoint;
+using UAV_Mission_Manager_DTO.Models.WeatherData;
 
 namespace UAV_Mission_Manager_BAL.Services.MissionService
 {
@@ -26,6 +29,8 @@ namespace UAV_Mission_Manager_BAL.Services.MissionService
         private readonly IRepository<MissionUAV> _missionUAVRepository;
         private readonly IRepository<MissionUser> _missionUserRepository;
         private readonly IWeatherService _weatherService;
+        private readonly IWaypointService _waypointService;
+        private readonly ITaskService _taskService;
         private readonly ApplicationDbContext _context;
         public MissionService(
             IRepository<Mission> missionRepository,
@@ -35,6 +40,8 @@ namespace UAV_Mission_Manager_BAL.Services.MissionService
             IRepository<MissionUAV> missionUAVRepository,
             IRepository<MissionUser> missionUserRepository,
             IWeatherService weatherService,
+            IWaypointService waypointService,
+            ITaskService taskService,
             ApplicationDbContext context)
         {
             _missionRepository = missionRepository;
@@ -44,6 +51,8 @@ namespace UAV_Mission_Manager_BAL.Services.MissionService
             _missionUAVRepository = missionUAVRepository;
             _missionUserRepository = missionUserRepository;
             _weatherService = weatherService;
+            _waypointService = waypointService;
+            _taskService = taskService;
             _context = context;
         }
         public async Task<CreateMissionResponseDto> CreateMissionAsync(CreateMissionDto createMissionDto)
@@ -64,6 +73,20 @@ namespace UAV_Mission_Manager_BAL.Services.MissionService
                 if (createMissionDto.ResponsibleUsers != null && createMissionDto.ResponsibleUsers.Any())
                 {
                     await AddResponsibleUsers(mission.Id, createMissionDto.ResponsibleUsers);
+                }
+
+                foreach (var waypointDto in createMissionDto.Waypoints)
+                {
+                    var createdWaypoint = await _waypointService.CreateWaypointAsync(
+                        waypointDto,
+                        mission.Id);
+
+                    foreach(var taskDto in waypointDto.Tasks)
+                    {
+                        var createdTask = await _taskService.CreateTaskAsync(
+                        taskDto,
+                        mission.Id);
+                    }
                 }
 
                 await transaction.CommitAsync();

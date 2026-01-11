@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using UAV_Mission_Manager_DTO.Models.Waypoint;
 using UAV_Mission_Manager_DTO.Models.WeatherData;
 
 namespace UAV_Mission_Manager_DTO.Models.Mission
@@ -17,5 +18,6 @@ namespace UAV_Mission_Manager_DTO.Models.Mission
         public CreateWeatherDataDto WeatherData { get; set; }
         public List<int> UAVIds { get; set; } = new List<int>();
         public List<string> ResponsibleUsers { get; set; } = new List<string>();
+        public List<CreateWaypointDto> Waypoints { get; set; }
     }
 }

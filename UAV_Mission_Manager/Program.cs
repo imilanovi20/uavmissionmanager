@@ -13,6 +13,8 @@ using UAV_Mission_Manager_BAL.Services.AdditionalEquipmentService;
 using UAV_Mission_Manager_BAL.Services.UAVService;
 using UAV_Mission_Manager_BAL.Services.MissionService;
 using UAV_Mission_Manager_BAL.Services.WeatherService;
+using UAV_Mission_Manager_BAL.Services.WaypointService;
+using UAV_Mission_Manager_BAL.Services.TaskService;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -35,6 +37,11 @@ builder.Services.AddScoped<IRepository<MissionUAV>, Repository<MissionUAV>>();
 builder.Services.AddScoped<IReadOnlyRepository<MissionUAV>, Repository<MissionUAV>>();
 builder.Services.AddScoped<IRepository<MissionUser>, Repository<MissionUser>>();
 builder.Services.AddScoped<IReadOnlyRepository<MissionUser>, Repository<MissionUser>>();
+builder.Services.AddScoped<IRepository<MissionTask>, Repository<MissionTask>>();
+builder.Services.AddScoped<IReadOnlyRepository<MissionTask>, Repository<MissionTask>>();
+builder.Services.AddScoped<IRepository<Waypoint>, Repository<Waypoint>>();
+builder.Services.AddScoped<IReadOnlyRepository<Waypoint>, Repository<Waypoint>>();
+
 
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IPasswordService, PasswordService>();
@@ -44,6 +51,8 @@ builder.Services.AddScoped<IAdditionalEquipmentService, AdditionalEquipmentServi
 builder.Services.AddScoped<IUAVService, UAVService>();
 builder.Services.AddScoped<IMissionService, MissionService>();
 builder.Services.AddHttpClient<IWeatherService, WeatherService>();
+builder.Services.AddScoped<IWaypointService, WaypointService>();
+builder.Services.AddScoped<ITaskService, TaskService>();
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
