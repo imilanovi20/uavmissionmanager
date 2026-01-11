@@ -17,7 +17,8 @@ namespace UAV_Mission_Manager_DAL.Entities
         public double Longitude { get; set; }
 
         public Mission Mission { get; set; }
-        public ICollection<TaskInMission> Tasks { get; set; } = new List<TaskInMission>();
+        public ICollection<MissionTask> Tasks { get; set; } = new List<MissionTask>();
+        public object Order { get; set; }
     }
 
     public class WaypointConfigurationBuilder : IEntityTypeConfiguration<Waypoint>
