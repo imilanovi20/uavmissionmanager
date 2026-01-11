@@ -16,22 +16,22 @@ namespace UAV_Mission_Manager_DAL.Entities
         ExecuteCommand,
         ChangeFormation
     }
-    public class TaskInMission
+    public class MissionTask
     {
         public int Id { get; set; }
         public int WaypointId { get; set; }
+        public int Order { get; set; }
         public TaskType Type { get; set; }
         public string Parameters { get; set; }
         public int? UAVId { get; set; } 
 
         public Waypoint Waypoint { get; set; }
         public UAV UAV { get; set; }
-
     }
 
-    public class MissionTaskConfigurationBuilder : IEntityTypeConfiguration<TaskInMission>
+    public class MissionTaskConfigurationBuilder : IEntityTypeConfiguration<MissionTask>
     {
-        public void Configure(EntityTypeBuilder<TaskInMission> builder)
+        public void Configure(EntityTypeBuilder<MissionTask> builder)
         {
             builder.HasKey(t => t.Id);
 
