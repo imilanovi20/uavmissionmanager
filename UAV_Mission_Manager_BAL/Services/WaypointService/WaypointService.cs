@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using UAV_Mission_Manager_DAL;
 using UAV_Mission_Manager_DAL.Entities;
 using UAV_Mission_Manager_DTO.Models.Waypoint;
+using UAV_Mission_Manager_DTO.Models.Task;
 
 namespace UAV_Mission_Manager_BAL.Services.WaypointService
 {
@@ -14,21 +14,19 @@ namespace UAV_Mission_Manager_BAL.Services.WaypointService
     {
         private readonly IRepository<Waypoint> _waypointRepository;
 
-        public WaypointService(
-            IRepository<Waypoint> waypointRepository)
+        public WaypointService(IRepository<Waypoint> waypointRepository)
         {
             _waypointRepository = waypointRepository;
         }
 
         public async Task<WaypointDto> CreateWaypointAsync(CreateWaypointDto dto, int missionId)
         {
-
             ValidateWaypoint(dto);
 
             var waypoint = new Waypoint
             {
                 MissionId = missionId,
-                Order = dto.Order,
+                OrderIndex = dto.Order,  
                 Latitude = dto.Latitude,
                 Longitude = dto.Longitude,
             };
@@ -48,14 +46,13 @@ namespace UAV_Mission_Manager_BAL.Services.WaypointService
                 var waypoint = new Waypoint
                 {
                     MissionId = missionId,
-                    Order = dto.Order,
+                    OrderIndex = dto.Order,  
                     Latitude = dto.Latitude,
                     Longitude = dto.Longitude
                 };
 
                 _waypointRepository.Add(waypoint);
                 await _waypointRepository.SaveAsync();
-
             }
 
             return await GetWaypointsByMissionIdAsync(missionId);
@@ -82,7 +79,7 @@ namespace UAV_Mission_Manager_BAL.Services.WaypointService
                 .GetAll()
                 .Include(w => w.Tasks)
                 .Where(w => w.MissionId == missionId)
-                .OrderBy(w => w.Order)
+                .OrderBy(w => w.OrderIndex)  
                 .ToListAsync();
 
             return waypoints.Select(MapToDto).ToList();
@@ -90,7 +87,6 @@ namespace UAV_Mission_Manager_BAL.Services.WaypointService
 
         public async Task UpdateWaypointAsync(int id, UpdateWaypointDto dto)
         {
-
             var waypoint = await _waypointRepository.GetByIdAsync(id);
 
             if (waypoint == null)
@@ -109,7 +105,6 @@ namespace UAV_Mission_Manager_BAL.Services.WaypointService
 
         public async Task DeleteWaypointAsync(int id)
         {
-
             var waypoint = await _waypointRepository.GetByIdAsync(id);
 
             if (waypoint == null)
@@ -154,9 +149,21 @@ namespace UAV_Mission_Manager_BAL.Services.WaypointService
             return new WaypointDto
             {
                 Id = waypoint.Id,
-                Order = waypoint.Order,
+                Order = waypoint.OrderIndex,
                 Latitude = waypoint.Latitude,
-                Longitude = waypoint.Longitude
+                Longitude = waypoint.Longitude,
+
+                Tasks = waypoint.Tasks?
+                    .OrderBy(t => t.Order)
+                    .Select(t => new TaskDto
+                    {
+                        Id = t.Id,
+                        Type = t.Type.ToString(),
+                        Order = t.Order,
+                        UAVId = t.UAVId,
+                        Parameters = t.Parameters
+                    })
+                    .ToList() ?? new List<TaskDto>()
             };
         }
 

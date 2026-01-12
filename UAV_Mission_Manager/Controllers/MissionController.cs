@@ -1,8 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using UAV_Mission_Manager_BAL.Services.MissionService;
-using UAV_Mission_Manager_BAL.Services.UAVService;
-using UAV_Mission_Manager_DTO.Models.AdditionalEquipment;
 using UAV_Mission_Manager_DTO.Models.Mission;
 
 namespace UAV_Mission_Manager_API.Controllers
@@ -13,13 +11,14 @@ namespace UAV_Mission_Manager_API.Controllers
     public class MissionController : ControllerBase
     {
         private readonly IMissionService _missionService;
+
         public MissionController(IMissionService missionService)
         {
             _missionService = missionService;
         }
 
         /// <summary>
-        /// Get equipment by ID
+        /// Get mission by ID
         /// </summary>
         [HttpGet("{id}")]
         public async Task<IActionResult> GetMissionById(int id)
@@ -37,10 +36,7 @@ namespace UAV_Mission_Manager_API.Controllers
             }
             catch (UnauthorizedAccessException ex)
             {
-                return Unauthorized(new
-                {
-                    message = "Access denied"
-                });
+                return Unauthorized(new { message = "Access denied" });
             }
             catch (Exception ex)
             {
@@ -63,6 +59,14 @@ namespace UAV_Mission_Manager_API.Controllers
 
                 var result = await _missionService.CreateMissionAsync(createDto);
 
+                if (result?.Mission == null)
+                {
+                    return StatusCode(500, new
+                    {
+                        message = result?.Response ?? "Failed to create mission"
+                    });
+                }
+
                 return CreatedAtAction(
                     nameof(GetMissionById),
                     new { id = result.Mission.Id },
@@ -70,17 +74,17 @@ namespace UAV_Mission_Manager_API.Controllers
             }
             catch (UnauthorizedAccessException ex)
             {
-                return Unauthorized(new
-                {
-                    message = "Access denied"
-                });
+                return Unauthorized(new { message = "Access denied" });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, ex.Message);
+                return StatusCode(500, new { message = ex.Message });
             }
         }
 
+        /// <summary>
+        /// Update weather for mission
+        /// </summary>
         [HttpPut("{id}/updateweather")]
         public async Task<IActionResult> UpdateWeatherForMission(int id)
         {
@@ -93,18 +97,15 @@ namespace UAV_Mission_Manager_API.Controllers
                     return Ok(result);
                 }
 
-                return StatusCode(500, result.Response);
+                return StatusCode(500, new { message = result.Response });
             }
             catch (UnauthorizedAccessException ex)
             {
-                return Unauthorized(new
-                {
-                    message = "Access denied"
-                });
+                return Unauthorized(new { message = "Access denied" });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, ex.Message);
+                return StatusCode(500, new { message = ex.Message });
             }
         }
     }
