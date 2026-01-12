@@ -17,10 +17,11 @@ namespace UAV_Mission_Manager_DTO.Models.Mission
         public string Description { get; set; }
         public DateTime CreatedAt { get; set; }
 
+        // Navigation properties
         public WeatherDataDto WeatherData { get; set; }
         public List<UAVDto> UAVs { get; set; } = new List<UAVDto>();
         public List<UserDto> ResponsibleUsers { get; set; } = new List<UserDto>();
-
         public List<WaypointDto> Waypoints { get; set; } = new List<WaypointDto>();
+        //public List<FormationDto> Formations { get; set; } = new List<FormationDto>();
     }
 }

@@ -24,6 +24,8 @@ namespace UAV_Mission_Manager_DAL
         public DbSet<MissionUser> MissionUsers { get; set; }
         public DbSet<MissionTask> Tasks { get; set; }
         public DbSet<Waypoint> Waypoints { get; set; }
+        public DbSet<Formation> Formations { get; set; }
+        public DbSet<UAVPosition> UAVPositions { get; set; }
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
