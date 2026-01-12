@@ -9,9 +9,9 @@ namespace UAV_Mission_Manager_DTO.Models.Waypoint
 {
     public class CreateWaypointDto
     {
-        public object Order { get; set; }
+        public int Order { get; set; }
         public double Latitude { get; set; }
         public double Longitude { get; set; }
-        public List<CreateTaskDto> Tasks { get; set; }
+        public List<CreateTaskDto> Tasks { get; set; } = new List<CreateTaskDto>();
     }
 }

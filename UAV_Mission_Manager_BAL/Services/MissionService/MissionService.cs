@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
-using System.Text;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -16,6 +14,7 @@ using UAV_Mission_Manager_DTO.Models.Mission;
 using UAV_Mission_Manager_DTO.Models.UAV;
 using UAV_Mission_Manager_DTO.Models.User;
 using UAV_Mission_Manager_DTO.Models.Waypoint;
+using UAV_Mission_Manager_DTO.Models.Task;
 using UAV_Mission_Manager_DTO.Models.WeatherData;
 
 namespace UAV_Mission_Manager_BAL.Services.MissionService
@@ -32,6 +31,7 @@ namespace UAV_Mission_Manager_BAL.Services.MissionService
         private readonly IWaypointService _waypointService;
         private readonly ITaskService _taskService;
         private readonly ApplicationDbContext _context;
+
         public MissionService(
             IRepository<Mission> missionRepository,
             IRepository<WeatherData> weatherDataRepository,
@@ -55,6 +55,7 @@ namespace UAV_Mission_Manager_BAL.Services.MissionService
             _taskService = taskService;
             _context = context;
         }
+
         public async Task<CreateMissionResponseDto> CreateMissionAsync(CreateMissionDto createMissionDto)
         {
             IDbContextTransaction transaction = null;
@@ -63,6 +64,7 @@ namespace UAV_Mission_Manager_BAL.Services.MissionService
                 transaction = await _context.Database.BeginTransactionAsync();
 
                 Mission mission = await SaveMission(createMissionDto);
+
                 await AddWeatherData(createMissionDto, mission);
 
                 if (createMissionDto.UAVIds != null && createMissionDto.UAVIds.Any())
@@ -81,16 +83,14 @@ namespace UAV_Mission_Manager_BAL.Services.MissionService
                         waypointDto,
                         mission.Id);
 
-                    foreach(var taskDto in waypointDto.Tasks)
+                    foreach (var taskDto in waypointDto.Tasks)
                     {
-                        var createdTask = await _taskService.CreateTaskAsync(
-                        taskDto,
-                        mission.Id);
+                        await _taskService.CreateTaskAsync(taskDto, createdWaypoint.Id);
                     }
                 }
 
                 await transaction.CommitAsync();
-                _context.ChangeTracker.Clear();
+
                 var missionDto = await GetMissionByIdAsync(mission.Id);
 
                 return new CreateMissionResponseDto
@@ -167,6 +167,7 @@ namespace UAV_Mission_Manager_BAL.Services.MissionService
                 {
                     throw new Exception($"UAV with ID {uavId} not found");
                 }
+
                 var missionUAV = new MissionUAV
                 {
                     MissionId = missionId,
@@ -207,6 +208,13 @@ namespace UAV_Mission_Manager_BAL.Services.MissionService
         {
             var missions = await _missionRepository.GetAll()
                 .Include(m => m.WeatherData)
+                .Include(m => m.MissionUAVs)
+                    .ThenInclude(mu => mu.UAV)
+                        .ThenInclude(u => u.UAV_AdditionalEquipments)
+                            .ThenInclude(uae => uae.AdditionalEquipment)
+                .Include(m => m.MissionUsers)
+                    .ThenInclude(mu => mu.User)
+                        .ThenInclude(u => u.UserRole)
                 .ToListAsync();
 
             return missions.Select(MapToDto);
@@ -223,9 +231,16 @@ namespace UAV_Mission_Manager_BAL.Services.MissionService
                 .Include(m => m.MissionUsers)
                     .ThenInclude(mu => mu.User)
                         .ThenInclude(u => u.UserRole)
+                .Include(m => m.Waypoints)  
+                    .ThenInclude(w => w.Tasks)  
                 .FirstOrDefaultAsync(m => m.Id == id);
 
-            return mission != null ? MapToDto(mission) : null;
+            if (mission == null)
+            {
+                return null;
+            }
+
+            return MapToDto(mission);
         }
 
         public Task<IEnumerable<MissionDto>> GetUserMissionsAsync()
@@ -300,6 +315,8 @@ namespace UAV_Mission_Manager_BAL.Services.MissionService
             }
         }
 
+        #region Private Mapping Methods
+
         private MissionDto MapToDto(Mission mission)
         {
             return new MissionDto
@@ -325,7 +342,13 @@ namespace UAV_Mission_Manager_BAL.Services.MissionService
                 // Responsible users
                 ResponsibleUsers = mission.MissionUsers?
                     .Select(mu => MapUserToDto(mu.User))
-                    .ToList() ?? new List<UserDto>()
+                    .ToList() ?? new List<UserDto>(),
+
+                // Waypoints sa Tasks
+                Waypoints = mission.Waypoints?
+                    .OrderBy(w => w.OrderIndex)
+                    .Select(w => MapWaypointToDto(w))
+                    .ToList() ?? new List<WaypointDto>()
             };
         }
 
@@ -380,5 +403,34 @@ namespace UAV_Mission_Manager_BAL.Services.MissionService
                 Role = user.UserRole?.Name ?? "Unknown"
             };
         }
+
+        private WaypointDto MapWaypointToDto(Waypoint waypoint)
+        {
+            return new WaypointDto
+            {
+                Id = waypoint.Id,
+                Order = waypoint.OrderIndex,
+                Latitude = waypoint.Latitude,
+                Longitude = waypoint.Longitude,
+                Tasks = waypoint.Tasks?
+                    .OrderBy(t => t.Order)
+                    .Select(t => MapTaskToDto(t))
+                    .ToList() ?? new List<TaskDto>()
+            };
+        }
+
+        private TaskDto MapTaskToDto(MissionTask task)
+        {
+            return new TaskDto
+            {
+                Id = task.Id,
+                Type = task.Type.ToString(),
+                Order = task.Order,
+                UAVId = task.UAVId,
+                Parameters = task.Parameters
+            };
+        }
+
+        #endregion
     }
 }

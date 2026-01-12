@@ -6,7 +6,9 @@ using System.Threading.Tasks;
 
 namespace UAV_Mission_Manager_DTO.Models.Task
 {
+
     public class UpdateTaskDto
     {
+        public string Parameters { get; set; }
     }
 }
