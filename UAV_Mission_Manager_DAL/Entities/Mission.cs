@@ -21,6 +21,7 @@ namespace UAV_Mission_Manager_DAL.Entities
         public ICollection<MissionUAV> MissionUAVs { get; set; } = new List<MissionUAV>();
         public ICollection<MissionUser> MissionUsers { get; set; } = new List<MissionUser>();
         public ICollection<Waypoint> Waypoints { get; set; } = new List<Waypoint>();
+        public ICollection<Formation> Formations { get; set; } = new List<Formation>();
         public WeatherData? WeatherData { get; set; }
     }
 
