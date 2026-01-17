@@ -99,7 +99,7 @@ namespace UAV_Mission_Manager_BAL.Services.MissionService
 
                     foreach (var taskDto in waypointDto.Tasks)
                     {
-                        var(task, updatedOrder) =await _taskService.CreateTaskAsync(taskDto, createdWaypoint.Id, currentFormationOrder);
+                        var (task, updatedOrder) =await _taskService.CreateTaskAsync(taskDto, createdWaypoint.Id, mission.Id, currentFormationOrder);
                         currentFormationOrder = updatedOrder;
                     }
                 }
@@ -247,7 +247,9 @@ namespace UAV_Mission_Manager_BAL.Services.MissionService
                     .ThenInclude(mu => mu.User)
                         .ThenInclude(u => u.UserRole)
                 .Include(m => m.Waypoints)  
-                    .ThenInclude(w => w.Tasks)  
+                    .ThenInclude(w => w.Tasks)
+                .Include(m => m.Formations)              
+                    .ThenInclude(f => f.UAVPositions)
                 .FirstOrDefaultAsync(m => m.Id == id);
 
             if (mission == null)
