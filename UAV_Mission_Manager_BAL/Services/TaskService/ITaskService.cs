@@ -10,7 +10,7 @@ namespace UAV_Mission_Manager_BAL.Services.TaskService
 {
     public interface ITaskService
     {
-        Task<TaskDto> CreateTaskAsync(CreateTaskDto dto, int waypointId);
+        Task<(TaskDto Task, int UpdatedFormationOrder)> CreateTaskAsync(CreateTaskDto dto, int waypointId, int currentFormationOrder);
 
         Task<List<TaskDto>> CreateTasksAsync(List<CreateTaskDto> dtos, int waypointId);
 
