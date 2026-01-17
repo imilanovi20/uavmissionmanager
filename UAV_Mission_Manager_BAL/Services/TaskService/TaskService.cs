@@ -27,7 +27,7 @@ namespace UAV_Mission_Manager_BAL.Services.TaskService
             _formationService = formationService;
         }
 
-        public async Task<(TaskDto Task, int UpdatedFormationOrder)> CreateTaskAsync(CreateTaskDto dto, int waypointId, int currentFormationOrder)
+        public async Task<(TaskDto Task, int UpdatedFormationOrder)> CreateTaskAsync(CreateTaskDto dto, int waypointId,int missionId, int currentFormationOrder)
         {
             await ValidateTaskAsync(dto);
 
@@ -46,9 +46,24 @@ namespace UAV_Mission_Manager_BAL.Services.TaskService
             int updatedFormationOrder = currentFormationOrder;
             if (task.Type == TaskType.ChangeFormation)
             {
-                var formationDto = JsonSerializer.Deserialize<CreateFormationDto>(dto.Parameters);
+                Console.WriteLine($"JSON Parameters: {dto.Parameters}");
+
+                var formationDto = JsonSerializer.Deserialize<CreateFormationDto>(
+                    dto.Parameters,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                Console.WriteLine($"Deserialized FormationType: {formationDto?.FormationType}");
+                Console.WriteLine($"Deserialized UAVPositions count: {formationDto?.UAVPositions?.Count ?? 0}");
+
+                if (formationDto == null)
+                {
+                    throw new ArgumentException("Failed to deserialize formation");
+                }
+
                 updatedFormationOrder++;
                 formationDto.Order = updatedFormationOrder;
+                formationDto.MissionId = missionId;
+
                 await _formationService.CreateFormationAsync(formationDto);
             }
 
@@ -189,7 +204,17 @@ namespace UAV_Mission_Manager_BAL.Services.TaskService
 
                 try
                 {
-                    var formation = JsonSerializer.Deserialize<FormationDto>(dto.Parameters);
+                    var formation = JsonSerializer.Deserialize<FormationDto>(
+                        dto.Parameters,
+                        new JsonSerializerOptions         
+                        {
+                            PropertyNameCaseInsensitive = true
+                        });
+
+                    if (formation == null)
+                    {
+                        throw new ArgumentException("Failed to deserialize formation");
+                    }
 
 
                     if (formation.UAVPositions == null || !formation.UAVPositions.Any())
