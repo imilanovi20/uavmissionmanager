@@ -11,7 +11,6 @@ namespace UAV_Mission_Manager_DAL.Entities
         public int MissionId { get; set; }
         public int? WaypointId { get; set; }
         public string FormationType { get; set; }
-        public double Spacing { get; set; }
         public int Order { get; set; }
 
         // Navigation properties
@@ -33,9 +32,6 @@ namespace UAV_Mission_Manager_DAL.Entities
                    .IsRequired()
                    .HasMaxLength(50);
 
-            builder.Property(f => f.Spacing)
-                   .HasPrecision(10, 2)
-                   .IsRequired();
 
             builder.Property(f => f.Order)
                    .IsRequired();

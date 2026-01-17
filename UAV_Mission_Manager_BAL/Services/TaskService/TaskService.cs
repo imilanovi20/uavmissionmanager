@@ -4,8 +4,10 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using UAV_Mission_Manager_BAL.Services.FormationService;
 using UAV_Mission_Manager_DAL;
 using UAV_Mission_Manager_DAL.Entities;
+using UAV_Mission_Manager_DTO.Models.Formation;
 using UAV_Mission_Manager_DTO.Models.Task;
 
 namespace UAV_Mission_Manager_BAL.Services.TaskService
@@ -14,16 +16,18 @@ namespace UAV_Mission_Manager_BAL.Services.TaskService
     {
         private readonly IRepository<MissionTask> _taskRepository;
         private readonly IRepository<UAV> _uavRepository;
+        private readonly IFormationService _formationService;
 
         public TaskService(
             IRepository<MissionTask> taskRepository,
-            IRepository<UAV> uavRepository)
+            IRepository<UAV> uavRepository, IFormationService formationService)
         {
             _taskRepository = taskRepository;
             _uavRepository = uavRepository;
+            _formationService = formationService;
         }
 
-        public async Task<TaskDto> CreateTaskAsync(CreateTaskDto dto, int waypointId)
+        public async Task<(TaskDto Task, int UpdatedFormationOrder)> CreateTaskAsync(CreateTaskDto dto, int waypointId, int currentFormationOrder)
         {
             await ValidateTaskAsync(dto);
 
@@ -39,7 +43,17 @@ namespace UAV_Mission_Manager_BAL.Services.TaskService
             _taskRepository.Add(task);
             await _taskRepository.SaveAsync();
 
-            return await GetTaskByIdAsync(task.Id);
+            int updatedFormationOrder = currentFormationOrder;
+            if (task.Type == TaskType.ChangeFormation)
+            {
+                var formationDto = JsonSerializer.Deserialize<CreateFormationDto>(dto.Parameters);
+                updatedFormationOrder++;
+                formationDto.Order = updatedFormationOrder;
+                await _formationService.CreateFormationAsync(formationDto);
+            }
+
+            var createdTask = await GetTaskByIdAsync(task.Id);
+            return (createdTask, updatedFormationOrder);
         }
 
         public async Task<List<TaskDto>> CreateTasksAsync(List<CreateTaskDto> dtos, int waypointId)
@@ -175,12 +189,8 @@ namespace UAV_Mission_Manager_BAL.Services.TaskService
 
                 try
                 {
-                    var formation = JsonSerializer.Deserialize<FormationParameters>(dto.Parameters);
+                    var formation = JsonSerializer.Deserialize<FormationDto>(dto.Parameters);
 
-                    if (formation.Spacing < 5.0)
-                    {
-                        throw new ArgumentException("Formation spacing must be at least 5m");
-                    }
 
                     if (formation.UAVPositions == null || !formation.UAVPositions.Any())
                     {
@@ -227,18 +237,4 @@ namespace UAV_Mission_Manager_BAL.Services.TaskService
         public Dictionary<string, object> Settings { get; set; }
     }
 
-    internal class FormationParameters
-    {
-        public string FormationType { get; set; }
-        public double Spacing { get; set; }
-        public List<UAVPosition> UAVPositions { get; set; }
-    }
-
-    internal class UAVPosition
-    {
-        public int UAVId { get; set; }
-        public double RelativeX { get; set; }
-        public double RelativeY { get; set; }
-        public double RelativeZ { get; set; }
-    }
 }

@@ -4,17 +4,20 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using UAV_Mission_Manager_BAL.Services.FormationService;
 using UAV_Mission_Manager_BAL.Services.TaskService;
 using UAV_Mission_Manager_BAL.Services.WaypointService;
 using UAV_Mission_Manager_BAL.Services.WeatherService;
 using UAV_Mission_Manager_DAL;
 using UAV_Mission_Manager_DAL.Entities;
 using UAV_Mission_Manager_DTO.Models.AdditionalEquipment;
+using UAV_Mission_Manager_DTO.Models.Formation;
 using UAV_Mission_Manager_DTO.Models.Mission;
+using UAV_Mission_Manager_DTO.Models.Task;
 using UAV_Mission_Manager_DTO.Models.UAV;
+using UAV_Mission_Manager_DTO.Models.UAVPostion;
 using UAV_Mission_Manager_DTO.Models.User;
 using UAV_Mission_Manager_DTO.Models.Waypoint;
-using UAV_Mission_Manager_DTO.Models.Task;
 using UAV_Mission_Manager_DTO.Models.WeatherData;
 
 namespace UAV_Mission_Manager_BAL.Services.MissionService
@@ -30,6 +33,7 @@ namespace UAV_Mission_Manager_BAL.Services.MissionService
         private readonly IWeatherService _weatherService;
         private readonly IWaypointService _waypointService;
         private readonly ITaskService _taskService;
+        private readonly IFormationService _formationService;
         private readonly ApplicationDbContext _context;
 
         public MissionService(
@@ -42,6 +46,7 @@ namespace UAV_Mission_Manager_BAL.Services.MissionService
             IWeatherService weatherService,
             IWaypointService waypointService,
             ITaskService taskService,
+            IFormationService formationService,
             ApplicationDbContext context)
         {
             _missionRepository = missionRepository;
@@ -53,6 +58,7 @@ namespace UAV_Mission_Manager_BAL.Services.MissionService
             _weatherService = weatherService;
             _waypointService = waypointService;
             _taskService = taskService;
+            _formationService = formationService;
             _context = context;
         }
 
@@ -77,6 +83,14 @@ namespace UAV_Mission_Manager_BAL.Services.MissionService
                     await AddResponsibleUsers(mission.Id, createMissionDto.ResponsibleUsers);
                 }
 
+                createMissionDto.InitialFormation.Order = 0;
+                createMissionDto.InitialFormation.MissionId = mission.Id;
+                await _formationService.CreateFormationAsync(
+                    createMissionDto.InitialFormation
+                );
+
+                int currentFormationOrder = 0;
+
                 foreach (var waypointDto in createMissionDto.Waypoints)
                 {
                     var createdWaypoint = await _waypointService.CreateWaypointAsync(
@@ -85,7 +99,8 @@ namespace UAV_Mission_Manager_BAL.Services.MissionService
 
                     foreach (var taskDto in waypointDto.Tasks)
                     {
-                        await _taskService.CreateTaskAsync(taskDto, createdWaypoint.Id);
+                        var(task, updatedOrder) =await _taskService.CreateTaskAsync(taskDto, createdWaypoint.Id, currentFormationOrder);
+                        currentFormationOrder = updatedOrder;
                     }
                 }
 
@@ -348,7 +363,35 @@ namespace UAV_Mission_Manager_BAL.Services.MissionService
                 Waypoints = mission.Waypoints?
                     .OrderBy(w => w.OrderIndex)
                     .Select(w => MapWaypointToDto(w))
-                    .ToList() ?? new List<WaypointDto>()
+                    .ToList() ?? new List<WaypointDto>(),
+
+                Formations = mission.Formations?
+                    .OrderBy(f => f.Order)
+                    .Select(f => MapFormationToDto(f))
+                    .ToList() ?? new List<FormationDto>()
+            };
+        }
+
+        private FormationDto MapFormationToDto(Formation formation)
+        {
+            return new FormationDto
+            {
+                FormationType = formation.FormationType,
+                Order = formation.Order,
+
+                UAVPositions = formation.UAVPositions?
+                    .Select(up => MapUAVPositionToDto(up))
+                    .ToList() ?? new List<UAVPositionDto>()
+            };
+        }
+
+        private UAVPositionDto MapUAVPositionToDto(UAV_Mission_Manager_DAL.Entities.UAVPosition position)
+        {
+            return new UAVPositionDto
+            {
+                UAVId = position.UAVId,
+                RelativeX = position.RelativeX,
+                RelativeY = position.RelativeY
             };
         }
 
