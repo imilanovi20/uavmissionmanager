@@ -16,92 +16,33 @@ namespace UAV_Mission_Manager_BAL.Services.PathPlanningService
     {
 
         private readonly HttpClient _httpClient;
-        private readonly ILogger<PathPlanningService> _logger;
 
         public PathPlanningService(HttpClient httpClient, ILogger<PathPlanningService> logger)
         {
             _httpClient = httpClient;
-            _logger = logger;
         }
         public async Task<ObstacleDetectionResultDto> DetectObstaclesAsync(GetObstacleDto dto)
         {
             var bounds = CalculateBounds(dto.Points);
-            var midLat = (bounds.minLat + bounds.maxLat) / 2;
-            var midLon = (bounds.minLon + bounds.maxLon) / 2;
-
             var searchArea = CalculateAreaKm2(bounds);
-            if (searchArea > 100) // Limit na 100 km²
+
+            var validationError = ValidateRequest(dto, searchArea);
+            if (validationError != null)
+                return validationError;
+
+            var query = BuildOverpassQuery(bounds, dto.AvoidTags);
+
+            var response = await SendOverpassRequestWithRetry(query);
+            if (response == null || !response.IsSuccessStatusCode)
             {
-                return new ObstacleDetectionResultDto
-                {
-                    Obstacles = new List<ObstacleDto>(),
-                    TotalObstaclesDetected = 0,
-                    SearchAreaKm2 = searchArea,
-                    DetectionSource = "Search area too large (max 100 km²)"
-                };
+                return CreateErrorResult(searchArea,
+                    $"Overpass API error: {response?.StatusCode} - {response?.ReasonPhrase}");
             }
-
-            if (dto.AvoidTags == null || !dto.AvoidTags.Any())
-            {
-                return new ObstacleDetectionResultDto
-                {
-                    Obstacles = new List<ObstacleDto>(),
-                    TotalObstaclesDetected = 0,
-                    SearchAreaKm2 = 0,
-                    DetectionSource = "No avoid tags"
-                };
-            }
-
-            var culture = System.Globalization.CultureInfo.InvariantCulture;
-
-            var tagQueries = dto.AvoidTags.Select(tag =>
-            {
-                if (tag.Contains("="))
-                {
-                    var parts = tag.Split('=', 2);
-                    return $@"  way[""{parts[0]}""=""{parts[1]}""]({bounds.minLat.ToString(culture)},{bounds.minLon.ToString(culture)},{bounds.maxLat.ToString(culture)},{bounds.maxLon.ToString(culture)});";
-                }
-                else
-                {
-                    return $@"  way[""{tag}""]({bounds.minLat.ToString(culture)},{bounds.minLon.ToString(culture)},{bounds.maxLat.ToString(culture)},{bounds.maxLon.ToString(culture)});";
-                }
-            });
-
-            // Optimiziran query sa bounding box i qt flag
-            var query = $@"[out:json][timeout:25][bbox:{bounds.minLat.ToString(culture)},{bounds.minLon.ToString(culture)},{bounds.maxLat.ToString(culture)},{bounds.maxLon.ToString(culture)}];
-(
-{string.Join("\n", tagQueries)}
-);
-out geom qt;";
-            _logger.LogInformation("Overpass API Query: {Query}", query);
-
-            var encodedQuery = Uri.EscapeDataString(query);
-            var url = $"https://overpass-api.de/api/interpreter?data={encodedQuery}";
 
             try
             {
-                // Koristi GetAsync umjesto GetStringAsync za bolju kontrolu
-                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-                var response = await _httpClient.GetAsync(url, cts.Token);
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    return new ObstacleDetectionResultDto
-                    {
-                        Obstacles = new List<ObstacleDto>(),
-                        TotalObstaclesDetected = 0,
-                        SearchAreaKm2 = searchArea,
-                        DetectionSource = $"Overpass API error: {response.StatusCode} - {response.ReasonPhrase}"
-                    };
-                }
-
                 var json = await response.Content.ReadAsStringAsync();
-                _logger.LogInformation("Started parsing");
                 var obstacles = ParseObstaclesFromOverpass(json);
-                _logger.LogInformation("Objects are parsed");
-                _logger.LogInformation("Objects are parsed: {Count} obstacles with total {Points} points",
-                    obstacles.Count,
-                    obstacles.Sum(o => o.Coordinates.Count));
 
                 return new ObstacleDetectionResultDto
                 {
@@ -111,35 +52,9 @@ out geom qt;";
                     DetectionSource = "Overpass API (OpenStreetMap)"
                 };
             }
-            catch (TaskCanceledException)
-            {
-                return new ObstacleDetectionResultDto
-                {
-                    Obstacles = new List<ObstacleDto>(),
-                    TotalObstaclesDetected = 0,
-                    SearchAreaKm2 = searchArea,
-                    DetectionSource = "Request timed out (30s limit)"
-                };
-            }
-            catch (HttpRequestException ex)
-            {
-                return new ObstacleDetectionResultDto
-                {
-                    Obstacles = new List<ObstacleDto>(),
-                    TotalObstaclesDetected = 0,
-                    SearchAreaKm2 = searchArea,
-                    DetectionSource = $"Network error: {ex.Message}"
-                };
-            }
             catch (Exception ex)
             {
-                return new ObstacleDetectionResultDto
-                {
-                    Obstacles = new List<ObstacleDto>(),
-                    TotalObstaclesDetected = 0,
-                    SearchAreaKm2 = searchArea,
-                    DetectionSource = $"Unexpected error: {ex.Message}"
-                };
+                return CreateErrorResult(searchArea, $"Error parsing response: {ex.Message}");
             }
         }
 
@@ -232,6 +147,129 @@ out geom qt;";
             var lonDist = CalculateHaversineDistance(bounds.minLat, bounds.minLon, bounds.minLat, bounds.maxLon) / 1000.0;
             return latDist * lonDist;
         }
+
+        #region Private Helper Methods
+
+        private ObstacleDetectionResultDto? ValidateRequest(GetObstacleDto dto, double searchArea)
+        {
+            if (searchArea > 100)
+            {
+                return CreateErrorResult(searchArea, "Search area too large (max 100 km²)");
+            }
+
+            if (dto.AvoidTags == null || !dto.AvoidTags.Any())
+            {
+                return CreateErrorResult(0, "No avoid tags");
+            }
+
+            return null;
+        }
+
+        private string BuildOverpassQuery(
+            (double minLat, double maxLat, double minLon, double maxLon) bounds,
+            List<string> avoidTags)
+        {
+            var culture = System.Globalization.CultureInfo.InvariantCulture;
+
+            var tagQueries = avoidTags.Select(tag =>
+            {
+                if (tag.Contains("="))
+                {
+                    var parts = tag.Split('=', 2);
+                    return $@"  way[""{parts[0]}""=""{parts[1]}""]({bounds.minLat.ToString(culture)},{bounds.minLon.ToString(culture)},{bounds.maxLat.ToString(culture)},{bounds.maxLon.ToString(culture)});";
+                }
+                else
+                {
+                    return $@"  way[""{tag}""]({bounds.minLat.ToString(culture)},{bounds.minLon.ToString(culture)},{bounds.maxLat.ToString(culture)},{bounds.maxLon.ToString(culture)});";
+                }
+            });
+
+            return $@"[out:json][timeout:60][bbox:{bounds.minLat.ToString(culture)},{bounds.minLon.ToString(culture)},{bounds.maxLat.ToString(culture)},{bounds.maxLon.ToString(culture)}];
+                (
+                {string.Join("\n", tagQueries)}
+                );
+                out geom qt 500;";
+        }
+
+        private async Task<HttpResponseMessage?> SendOverpassRequestWithRetry(string query)
+        {
+            const int maxRetries = 3;
+            const int baseDelayMs = 2000;
+
+            var encodedQuery = Uri.EscapeDataString(query);
+            var url = $"https://overpass-api.de/api/interpreter?data={encodedQuery}";
+
+            for (int attempt = 1; attempt <= maxRetries; attempt++)
+            {
+                try
+                {
+                    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+                    var response = await _httpClient.GetAsync(url, cts.Token);
+
+                    if (response.IsSuccessStatusCode)
+                    {
+                        return response;
+                    }
+
+                    if (ShouldRetry(response.StatusCode) && attempt < maxRetries)
+                    {
+                        await DelayBeforeRetry(attempt, baseDelayMs,
+                            $"Overpass API returned {response.StatusCode}");
+                        continue;
+                    }
+
+                    return response;
+                }
+                catch (TaskCanceledException)
+                {
+                    if (attempt < maxRetries)
+                    {
+                        await DelayBeforeRetry(attempt, baseDelayMs, "Request timed out");
+                        continue;
+                    }
+
+                    return null;
+                }
+                catch (HttpRequestException ex)
+                {
+                    if (attempt < maxRetries)
+                    {
+                        await DelayBeforeRetry(attempt, baseDelayMs, "Network error");
+                        continue;
+                    }
+
+                    return null;
+                }
+            }
+
+            return null;
+        }
+
+        private bool ShouldRetry(System.Net.HttpStatusCode statusCode)
+        {
+            return statusCode == System.Net.HttpStatusCode.TooManyRequests ||
+                   statusCode == System.Net.HttpStatusCode.GatewayTimeout ||
+                   statusCode == System.Net.HttpStatusCode.ServiceUnavailable;
+        }
+
+        private async Task DelayBeforeRetry(int attempt, int baseDelayMs, string reason)
+        {
+            var delay = baseDelayMs * attempt;
+            await Task.Delay(delay);
+        }
+
+        private ObstacleDetectionResultDto CreateErrorResult(double searchArea, string message)
+        {
+            return new ObstacleDetectionResultDto
+            {
+                Obstacles = new List<ObstacleDto>(),
+                TotalObstaclesDetected = 0,
+                SearchAreaKm2 = searchArea,
+                DetectionSource = message
+            };
+        }
+
+        #endregion
 
     }
 }
