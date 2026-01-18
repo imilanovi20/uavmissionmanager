@@ -16,6 +16,7 @@ using UAV_Mission_Manager_BAL.Services.WeatherService;
 using UAV_Mission_Manager_BAL.Services.WaypointService;
 using UAV_Mission_Manager_BAL.Services.TaskService;
 using UAV_Mission_Manager_BAL.Services.FormationService;
+using UAV_Mission_Manager_BAL.Services.PathPlanningService;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -59,6 +60,7 @@ builder.Services.AddHttpClient<IWeatherService, WeatherService>();
 builder.Services.AddScoped<IWaypointService, WaypointService>();
 builder.Services.AddScoped<ITaskService, TaskService>();
 builder.Services.AddScoped<IFormationService, FormationService>();
+builder.Services.AddHttpClient<IPathPlanningService, PathPlanningService>();
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>

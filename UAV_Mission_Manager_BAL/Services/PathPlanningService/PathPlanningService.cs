@@ -5,8 +5,10 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using UAV_Mission_Manager_DAL.Entities;
 using UAV_Mission_Manager_DTO.Models.PathPlanning;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace UAV_Mission_Manager_BAL.Services.PathPlanningService
 {
@@ -14,25 +16,41 @@ namespace UAV_Mission_Manager_BAL.Services.PathPlanningService
     {
 
         private readonly HttpClient _httpClient;
+        private readonly ILogger<PathPlanningService> _logger;
 
-        public PathPlanningService(HttpClient httpClient)
+        public PathPlanningService(HttpClient httpClient, ILogger<PathPlanningService> logger)
         {
             _httpClient = httpClient;
+            _logger = logger;
         }
         public async Task<ObstacleDetectionResultDto> DetectObstaclesAsync(GetObstacleDto dto)
         {
             var bounds = CalculateBounds(dto.Points);
             var midLat = (bounds.minLat + bounds.maxLat) / 2;
             var midLon = (bounds.minLon + bounds.maxLon) / 2;
-            var radius = CalculateHaversineDistance(midLat, midLon, bounds.maxLat, bounds.maxLon);
 
-            if (dto.AvoidTags == null || !dto.AvoidTags.Any()) return new ObstacleDetectionResultDto
+            var searchArea = CalculateAreaKm2(bounds);
+            if (searchArea > 100) // Limit na 100 km²
             {
-                Obstacles = new List<ObstacleDto>(),
-                TotalObstaclesDetected = 0,
-                SearchAreaKm2 = 0,
-                DetectionSource = "No avoid tags"
-            };
+                return new ObstacleDetectionResultDto
+                {
+                    Obstacles = new List<ObstacleDto>(),
+                    TotalObstaclesDetected = 0,
+                    SearchAreaKm2 = searchArea,
+                    DetectionSource = "Search area too large (max 100 km²)"
+                };
+            }
+
+            if (dto.AvoidTags == null || !dto.AvoidTags.Any())
+            {
+                return new ObstacleDetectionResultDto
+                {
+                    Obstacles = new List<ObstacleDto>(),
+                    TotalObstaclesDetected = 0,
+                    SearchAreaKm2 = 0,
+                    DetectionSource = "No avoid tags"
+                };
+            }
 
             var culture = System.Globalization.CultureInfo.InvariantCulture;
 
@@ -41,32 +59,49 @@ namespace UAV_Mission_Manager_BAL.Services.PathPlanningService
                 if (tag.Contains("="))
                 {
                     var parts = tag.Split('=', 2);
-                    return $@"way[""{parts[0]}""=""{parts[1]}""]
-                         (around:{radius:F0},{midLat.ToString(culture)},{midLon.ToString(culture)});";
+                    return $@"  way[""{parts[0]}""=""{parts[1]}""]({bounds.minLat.ToString(culture)},{bounds.minLon.ToString(culture)},{bounds.maxLat.ToString(culture)},{bounds.maxLon.ToString(culture)});";
                 }
                 else
                 {
-                    return $@"way[""{tag}""]
-                        (around:{radius:F0},{midLat.ToString(culture)},{midLon.ToString(culture)});";
+                    return $@"  way[""{tag}""]({bounds.minLat.ToString(culture)},{bounds.minLon.ToString(culture)},{bounds.maxLat.ToString(culture)},{bounds.maxLon.ToString(culture)});";
                 }
             });
 
-            var query = $@"
-                [out:json][timeout:25];
-                (
-                {string.Join("\n", tagQueries)}
-                );
-                out geom;";
+            // Optimiziran query sa bounding box i qt flag
+            var query = $@"[out:json][timeout:25][bbox:{bounds.minLat.ToString(culture)},{bounds.minLon.ToString(culture)},{bounds.maxLat.ToString(culture)},{bounds.maxLon.ToString(culture)}];
+(
+{string.Join("\n", tagQueries)}
+);
+out geom qt;";
+            _logger.LogInformation("Overpass API Query: {Query}", query);
 
             var encodedQuery = Uri.EscapeDataString(query);
             var url = $"https://overpass-api.de/api/interpreter?data={encodedQuery}";
 
             try
             {
-                var response = await _httpClient.GetStringAsync(url);
-                var obstacles = ParseObstaclesFromOverpass(response);
+                // Koristi GetAsync umjesto GetStringAsync za bolju kontrolu
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+                var response = await _httpClient.GetAsync(url, cts.Token);
 
-                var searchArea = CalculateAreaKm2(bounds);
+                if (!response.IsSuccessStatusCode)
+                {
+                    return new ObstacleDetectionResultDto
+                    {
+                        Obstacles = new List<ObstacleDto>(),
+                        TotalObstaclesDetected = 0,
+                        SearchAreaKm2 = searchArea,
+                        DetectionSource = $"Overpass API error: {response.StatusCode} - {response.ReasonPhrase}"
+                    };
+                }
+
+                var json = await response.Content.ReadAsStringAsync();
+                _logger.LogInformation("Started parsing");
+                var obstacles = ParseObstaclesFromOverpass(json);
+                _logger.LogInformation("Objects are parsed");
+                _logger.LogInformation("Objects are parsed: {Count} obstacles with total {Points} points",
+                    obstacles.Count,
+                    obstacles.Sum(o => o.Coordinates.Count));
 
                 return new ObstacleDetectionResultDto
                 {
@@ -76,19 +111,36 @@ namespace UAV_Mission_Manager_BAL.Services.PathPlanningService
                     DetectionSource = "Overpass API (OpenStreetMap)"
                 };
             }
-            catch
+            catch (TaskCanceledException)
             {
                 return new ObstacleDetectionResultDto
                 {
                     Obstacles = new List<ObstacleDto>(),
                     TotalObstaclesDetected = 0,
-                    SearchAreaKm2 = 0,
-                    DetectionSource = "Failed to detect obstacles"
+                    SearchAreaKm2 = searchArea,
+                    DetectionSource = "Request timed out (30s limit)"
                 };
             }
-
-
-            throw new NotImplementedException();
+            catch (HttpRequestException ex)
+            {
+                return new ObstacleDetectionResultDto
+                {
+                    Obstacles = new List<ObstacleDto>(),
+                    TotalObstaclesDetected = 0,
+                    SearchAreaKm2 = searchArea,
+                    DetectionSource = $"Network error: {ex.Message}"
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ObstacleDetectionResultDto
+                {
+                    Obstacles = new List<ObstacleDto>(),
+                    TotalObstaclesDetected = 0,
+                    SearchAreaKm2 = searchArea,
+                    DetectionSource = $"Unexpected error: {ex.Message}"
+                };
+            }
         }
 
         public Task<List<RoutePointDto>> FindOptimalMultiWaypointRouteAsync(CreateRouteDto dto)
@@ -162,6 +214,8 @@ namespace UAV_Mission_Manager_BAL.Services.PathPlanningService
                                    ? name.GetString() ?? ""
                                    : ""
                         });
+
+
                     }
                 }
             }
