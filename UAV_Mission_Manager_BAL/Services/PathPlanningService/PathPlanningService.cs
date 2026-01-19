@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using UAV_Mission_Manager_BAL.Services.PathPlanningService.OptimalRouteService;
 using UAV_Mission_Manager_DAL.Entities;
 using UAV_Mission_Manager_DTO.Models.PathPlanning;
 using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
@@ -16,10 +17,12 @@ namespace UAV_Mission_Manager_BAL.Services.PathPlanningService
     {
 
         private readonly HttpClient _httpClient;
+        private readonly ILogger<PathPlanningService> _logger;
 
         public PathPlanningService(HttpClient httpClient, ILogger<PathPlanningService> logger)
         {
             _httpClient = httpClient;
+            _logger = logger;
         }
         public async Task<ObstacleDetectionResultDto> DetectObstaclesAsync(GetObstacleDto dto)
         {
@@ -58,10 +61,60 @@ namespace UAV_Mission_Manager_BAL.Services.PathPlanningService
             }
         }
 
-        public Task<List<RoutePointDto>> FindOptimalMultiWaypointRouteAsync(CreateRouteDto dto)
+        public async Task<RouteOptimizationResultDto> FindOptimalMultiWaypointRouteAsync(CreateRouteDto dto)
         {
-            throw new NotImplementedException();
+            var astarService = new AStarService();
+            var completeRoute = new List<PointDto>();
+            var totalDistance = 0.0;
+            try
+            {
+                for (int i = 0; i < dto.Waypoints.Count-1; i++)
+                {
+                    var start = dto.Waypoints[i];
+                    var end = dto.Waypoints[i + 1];
+
+                    var segmentRoute = astarService.GetRouteBetweenPoints(start, end, dto.Obstacles);
+
+                    if (completeRoute.Count == 0)
+                    {
+                        completeRoute.AddRange(segmentRoute);
+                    }
+                    else
+                    {
+                        completeRoute.AddRange(segmentRoute.Skip(1));
+                    }
+
+                    for (int j = 0; j < segmentRoute.Count - 1; j++)
+                    {
+                        totalDistance += CalculateHaversineDistance(
+                            segmentRoute[j].Lat, segmentRoute[j].Lng,
+                            segmentRoute[j + 1].Lat, segmentRoute[j + 1].Lng
+                        );
+                    }
+
+                }
+
+                for (int ind = 0; ind < completeRoute.Count; ind++)
+                {
+                    completeRoute[ind].Order = ind;
+                }
+                return new RouteOptimizationResultDto
+                {
+                    Success = true,
+                    OptimizedRoute = completeRoute,
+                    TotalDistance = totalDistance,
+                    TotalPoints = completeRoute.Count,
+
+                };
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Error: ", ex);
+            }
         }
+
+
+        #region Private Helper Methods
 
         private (double minLat, double maxLat, double minLon, double maxLon) CalculateBounds(
             List<PointDto> waypoints)
@@ -147,8 +200,6 @@ namespace UAV_Mission_Manager_BAL.Services.PathPlanningService
             var lonDist = CalculateHaversineDistance(bounds.minLat, bounds.minLon, bounds.minLat, bounds.maxLon) / 1000.0;
             return latDist * lonDist;
         }
-
-        #region Private Helper Methods
 
         private ObstacleDetectionResultDto? ValidateRequest(GetObstacleDto dto, double searchArea)
         {
@@ -267,6 +318,86 @@ namespace UAV_Mission_Manager_BAL.Services.PathPlanningService
                 SearchAreaKm2 = searchArea,
                 DetectionSource = message
             };
+        }
+
+        //Start
+
+        private void CreateBufferZones(List<ObstacleDto> obstacles, double bufferMeters)
+        {
+            foreach (var obstacle in obstacles)
+            {
+                obstacle.BufferCoordinates = CreateBuffer(obstacle.Coordinates, bufferMeters);
+            }
+        }
+
+        private List<PointDto> CreateBuffer(List<PointDto> coords, double meters)
+        {
+            const double metersPerDegreeLat = 111320.0;
+            var buffer = new List<PointDto>();
+
+            foreach (var coord in coords)
+            {
+                var metersPerDegreeLon = metersPerDegreeLat * Math.Cos(coord.Lat * Math.PI / 180);
+                var latOffset = meters / metersPerDegreeLat;
+                var lonOffset = meters / metersPerDegreeLon;
+
+                buffer.Add(new PointDto
+                {
+                    Lat = coord.Lat + latOffset,
+                    Lng = coord.Lng + lonOffset
+                });
+            }
+
+            return buffer;
+        }
+
+        
+
+        private bool PathIntersectsObstacles(PointDto start, PointDto end, List<ObstacleDto> obstacles)
+        {
+            foreach (var obstacle in obstacles)
+            {
+                if (obstacle.BufferCoordinates == null || obstacle.BufferCoordinates.Count < 3)
+                    continue;
+
+                if (LineIntersectsPolygon(start, end, obstacle.BufferCoordinates))
+                    return true;
+            }
+
+            return false;
+        }
+
+        private bool LineIntersectsPolygon(PointDto start, PointDto end, List<PointDto> polygon)
+        {
+            for (int i = 0; i < polygon.Count; i++)
+            {
+                var p1 = polygon[i];
+                var p2 = polygon[(i + 1) % polygon.Count];
+
+                if (LineSegmentsIntersect(start, end, p1, p2))
+                    return true;
+            }
+
+            return false;
+        }
+
+        private bool LineSegmentsIntersect(PointDto p1, PointDto p2, PointDto p3, PointDto p4)
+        {
+            var d1 = Direction(p3, p4, p1);
+            var d2 = Direction(p3, p4, p2);
+            var d3 = Direction(p1, p2, p3);
+            var d4 = Direction(p1, p2, p4);
+
+            if (((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) &&
+                ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0)))
+                return true;
+
+            return false;
+        }
+
+        private double Direction(PointDto p1, PointDto p2, PointDto p3)
+        {
+            return (p3.Lat - p1.Lat) * (p2.Lng - p1.Lng) - (p2.Lat - p1.Lat) * (p3.Lng - p1.Lng);
         }
 
         #endregion
