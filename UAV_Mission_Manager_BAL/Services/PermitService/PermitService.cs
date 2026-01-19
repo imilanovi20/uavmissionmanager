@@ -50,12 +50,13 @@ namespace UAV_Mission_Manager_BAL.Services.PermitService
 
         public async Task<OperationCategoryResponseDto> CalculateOperationCategory(GetOperationCategoryDto dto)
         {
-            var tasks = dto.UAVIds
-                .Select(id => _uavService.GetUAVByIdAsync(id));
-
-            var uavs = (await Task.WhenAll(tasks))
-                .Where(u => u != null)
-                .ToList();
+            var uavs = new List<UAVDto>();
+            foreach (var id in dto.UAVIds)
+            {
+                var uav = await _uavService.GetUAVByIdAsync(id);
+                if (uav != null)
+                    uavs.Add(uav);
+            }
 
             if (!uavs.Any())
                 throw new Exception("No UAVs found with provided IDs");
