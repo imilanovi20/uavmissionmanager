@@ -5,11 +5,14 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UAV_Mission_Manager_BAL.Services.PathPlanningService;
+using UAV_Mission_Manager_BAL.Services.TaskService;
 using UAV_Mission_Manager_BAL.Services.UAVService;
 using UAV_Mission_Manager_DAL;
 using UAV_Mission_Manager_DAL.Entities;
+using UAV_Mission_Manager_DTO.Models.ExecuteCommand;
 using UAV_Mission_Manager_DTO.Models.PathPlanning;
 using UAV_Mission_Manager_DTO.Models.PermitDto;
+using UAV_Mission_Manager_DTO.Models.Task;
 using UAV_Mission_Manager_DTO.Models.UAV;
 
 namespace UAV_Mission_Manager_BAL.Services.PermitService
@@ -79,6 +82,32 @@ namespace UAV_Mission_Manager_BAL.Services.PermitService
                 OperationCategory = operationCategory.ToString(),
             };
         }
+
+        public Task<RecordingPermisionDto> IsRecordingPermissionRequired(List<TaskDto> dtos)
+        {
+            foreach (var task in dtos)
+            {
+                if (task.Type == TaskType.ExecuteCommand.ToString())
+                {
+                    var parameters = System.Text.Json.JsonSerializer.Deserialize<ExecuteCommandParametersDto>(task.Parameters);
+                    if (parameters.Command.ToLower().Contains("camera") || parameters.Command.ToLower().Contains("record") || 
+                        parameters.Command.ToLower().Contains("video") || parameters.Command.ToLower().Contains("photo"))
+                    {
+                        return Task.FromResult(new RecordingPermisionDto
+                        {
+                            IsRecordingPermissionRequired = true,
+                            Message = "Recording permission is required due to camera operation tasks."
+                        });
+
+                    }
+                }
+            }
+            return Task.FromResult(new RecordingPermisionDto
+            {
+                IsRecordingPermissionRequired = false,
+                Message = ""
+            });
+            }
 
         private UAVWeightCategory DetermineUAVWeightClass(double weightInGrams)
         {
