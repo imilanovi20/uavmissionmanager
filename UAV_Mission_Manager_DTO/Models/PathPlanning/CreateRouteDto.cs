@@ -8,5 +8,7 @@ namespace UAV_Mission_Manager_DTO.Models.PathPlanning
 {
     public class CreateRouteDto
     {
+        public List<ObstacleDto> Obstacles { get; set; }
+        public List<PointDto> Waypoints { get; set; }
     }
 }

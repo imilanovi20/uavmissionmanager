@@ -11,5 +11,6 @@ namespace UAV_Mission_Manager_DTO.Models.PathPlanning
         public List<PointDto> Coordinates { get; set; }
         public string Type { get; set; }
         public string Name { get; set; }
+        public List<PointDto>? BufferCoordinates { get; set; }
     }
 }

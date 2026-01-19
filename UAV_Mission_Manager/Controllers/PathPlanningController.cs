@@ -50,5 +50,39 @@ namespace UAV_Mission_Manager_API.Controllers
                 return StatusCode(500, ex.Message);
             }
         }
+
+        /// <summary>
+        /// Find optimal route between waypoints avoiding obstacles
+        /// </summary>
+        /// <param name="dto">Waypoints, obstacles, and algorithm parameters</param>
+        /// <returns>Optimized route with calculated points</returns>
+        /// <response code="200">Returns optimized route</response>
+        /// <response code="400">Invalid request data or optimization failed</response>
+        /// <response code="401">Unauthorized access</response>
+        /// <response code="500">Internal server error</response>
+        [HttpPost("optimalroute")]
+        public async Task<IActionResult> FindOptimalRoute([FromBody] CreateRouteDto dto)
+        {
+            try
+            {
+                var result = await _pathPlanningService.FindOptimalMultiWaypointRouteAsync(dto);
+
+                if (!result.Success)
+                    return BadRequest(new { message = result.Error });
+
+                return Ok(result);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Unauthorized(new
+                {
+                    message = "Access denied"
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+        }
     }
 }
