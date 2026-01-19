@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using UAV_Mission_Manager_BAL.Services.FormationService;
 using UAV_Mission_Manager_DAL;
 using UAV_Mission_Manager_DAL.Entities;
+using UAV_Mission_Manager_DTO.Models.ExecuteCommand;
 using UAV_Mission_Manager_DTO.Models.Formation;
 using UAV_Mission_Manager_DTO.Models.Task;
 
@@ -159,7 +160,7 @@ namespace UAV_Mission_Manager_BAL.Services.TaskService
 
                 try
                 {
-                    var parameters = JsonSerializer.Deserialize<ExecuteCommandParameters>(dto.Parameters);
+                    var parameters = JsonSerializer.Deserialize<ExecuteCommandParametersDto>(dto.Parameters);
 
                     if (parameters.EquipmentId <= 0)
                     {
@@ -254,12 +255,6 @@ namespace UAV_Mission_Manager_BAL.Services.TaskService
         }
 
         #endregion
-    }
-    internal class ExecuteCommandParameters
-    {
-        public int EquipmentId { get; set; }
-        public string Command { get; set; }
-        public Dictionary<string, object> Settings { get; set; }
     }
 
 }
