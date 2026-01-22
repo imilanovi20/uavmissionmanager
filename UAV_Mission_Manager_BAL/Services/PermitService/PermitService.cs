@@ -90,7 +90,7 @@ namespace UAV_Mission_Manager_BAL.Services.PermitService
                 if (task.Type == TaskType.ExecuteCommand.ToString())
                 {
                     var parameters = System.Text.Json.JsonSerializer.Deserialize<ExecuteCommandParametersDto>(task.Parameters);
-                    if (parameters.Command.ToLower().Contains("camera") || parameters.Command.ToLower().Contains("record") || 
+                    if (parameters.Command.ToLower().Contains("camera") || parameters.Command.ToLower().Contains("record") ||
                         parameters.Command.ToLower().Contains("video") || parameters.Command.ToLower().Contains("photo"))
                     {
                         return Task.FromResult(new RecordingPermisionDto
@@ -107,7 +107,79 @@ namespace UAV_Mission_Manager_BAL.Services.PermitService
                 IsRecordingPermissionRequired = false,
                 Message = ""
             });
+        }
+
+
+        public async Task<AirspaceCheckResultDto> CheckAirspaceViolation(List<PointDto> routePoints)
+        {
+            if (routePoints == null || routePoints.Count < 2)
+            {
+                return new AirspaceCheckResultDto
+                {
+                    Success = false,
+                    CrossesAirspace = false,
+                    Message = "At least 2 route points required"
+                };
             }
+
+            var getAerodromeDto = new GetObstacleDto
+            {
+                Points = routePoints,
+                AvoidTags = new List<string>
+            {
+                "aeroway=aerodrome",
+                "aeroway=airport",
+                "aeroway=international"
+            }
+            };
+
+            var aerodromeResult = await _pathPlanningService.DetectObstaclesAsync(getAerodromeDto);
+
+            if (aerodromeResult.Obstacles == null || !aerodromeResult.Obstacles.Any())
+            {
+                return new AirspaceCheckResultDto
+                {
+                    Success = true,
+                    CrossesAirspace = false,
+                    AirportsViolated = 0,
+                    Violations = new List<AirspaceViolationDto>(),
+                    Message = "The route does not pass through restricted airspace. There are no airports nearby."
+                };
+            }
+
+            CreateAerodromeBufferZones(aerodromeResult.Obstacles, 2.99); 
+
+            var violations = new List<AirspaceViolationDto>();
+
+            for (int i = 0; i < routePoints.Count - 1; i++)
+            {
+                var segmentStart = routePoints[i];
+                var segmentEnd = routePoints[i + 1];
+
+                foreach (var aerodrome in aerodromeResult.Obstacles)
+                {
+                    if (DoesSegmentCrossAerodrome(segmentStart, segmentEnd, aerodrome))
+                    {
+                        var violation = CreateViolation(aerodrome, segmentStart, segmentEnd, i);
+
+                        if (!violations.Any(v => v.AirportName == aerodrome.Name))
+                        {
+                            violations.Add(violation);
+                        }
+                    }
+                }
+            }
+            var crossesAirspace = violations.Any();
+
+            return new AirspaceCheckResultDto
+            {
+                Success = true,
+                CrossesAirspace = crossesAirspace,
+                AirportsViolated = violations.Count,
+                Violations = violations,
+                Message = "Fly zone"
+            };
+        }
 
         private UAVWeightCategory DetermineUAVWeightClass(double weightInGrams)
         {
@@ -256,6 +328,178 @@ namespace UAV_Mission_Manager_BAL.Services.PermitService
 
                 _ => OperationCategory.D
             };
+        }
+
+
+        private void CreateAerodromeBufferZones(List<ObstacleDto> aerodromes, double bufferMeters)
+        {
+            foreach (var aerodrome in aerodromes)
+            {
+                if (aerodrome.Coordinates != null && aerodrome.Coordinates.Count >= 3)
+                {
+                    aerodrome.BufferCoordinates = CreateBufferAroundAerodrome(
+                        aerodrome.Coordinates,
+                        bufferMeters);
+                }
+            }
+        }
+
+        private List<PointDto> CreateBufferAroundAerodrome(List<PointDto> originalCoords, double bufferMeters)
+        {
+            if (originalCoords.Count < 3)
+                return originalCoords;
+
+            const double metersToDegreesLat = 1.0 / 111320.0;
+
+            var centerLat = originalCoords.Average(c => c.Lat);
+            var centerLon = originalCoords.Average(c => c.Lng);
+            var metersToDegreesLon = metersToDegreesLat / Math.Cos(centerLat * Math.PI / 180.0);
+
+            var bufferedCoords = new List<PointDto>();
+
+            foreach (var point in originalCoords)
+            {
+                var vectorLat = point.Lat - centerLat;
+                var vectorLon = point.Lng - centerLon;
+
+                var vectorLengthLat = vectorLat / metersToDegreesLat;
+                var vectorLengthLon = vectorLon / metersToDegreesLon;
+                var vectorLength = Math.Sqrt(
+                    vectorLengthLat * vectorLengthLat +
+                    vectorLengthLon * vectorLengthLon);
+
+                if (vectorLength < 0.1)
+                {
+                    // Točka je preblizu centru
+                    bufferedCoords.Add(new PointDto
+                    {
+                        Lat = point.Lat + bufferMeters * metersToDegreesLat,
+                        Lng = point.Lng
+                    });
+                }
+                else
+                {
+                    // Normaliziraj vektor i dodaj buffer
+                    var normalizedVectorLat = vectorLengthLat / vectorLength;
+                    var normalizedVectorLon = vectorLengthLon / vectorLength;
+
+                    bufferedCoords.Add(new PointDto
+                    {
+                        Lat = point.Lat + normalizedVectorLat * bufferMeters * metersToDegreesLat,
+                        Lng = point.Lng + normalizedVectorLon * bufferMeters * metersToDegreesLon
+                    });
+                }
+            }
+
+            return bufferedCoords;
+        }
+
+        private bool DoesSegmentCrossAerodrome(
+            PointDto segmentStart,
+            PointDto segmentEnd,
+            ObstacleDto aerodrome)
+        {
+            if (aerodrome.BufferCoordinates == null || aerodrome.BufferCoordinates.Count < 3)
+                return false;
+
+            const int checkPoints = 20;
+
+            for (int i = 0; i <= checkPoints; i++)
+            {
+                double t = (double)i / checkPoints;
+                double lat = segmentStart.Lat + t * (segmentEnd.Lat - segmentStart.Lat);
+                double lng = segmentStart.Lng + t * (segmentEnd.Lng - segmentStart.Lng);
+
+                if (IsPointInPolygon(lat, lng, aerodrome.BufferCoordinates))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private bool IsPointInPolygon(double lat, double lng, List<PointDto> polygon)
+        {
+            if (polygon.Count < 3)
+                return false;
+
+            int intersections = 0;
+            int n = polygon.Count;
+
+            for (int i = 0; i < n; i++)
+            {
+                var p1 = polygon[i];
+                var p2 = polygon[(i + 1) % n];
+
+                if (((p1.Lat <= lat && lat < p2.Lat) || (p2.Lat <= lat && lat < p1.Lat)) &&
+                    (lng < (p2.Lng - p1.Lng) * (lat - p1.Lat) / (p2.Lat - p1.Lat) + p1.Lng))
+                {
+                    intersections++;
+                }
+            }
+
+            return intersections % 2 == 1;
+        }
+
+    private AirspaceViolationDto CreateViolation(
+        ObstacleDto aerodrome,
+        PointDto segmentStart,
+        PointDto segmentEnd,
+        int segmentIndex)
+        {
+            var centerLat = aerodrome.Coordinates.Average(c => c.Lat);
+            var centerLng = aerodrome.Coordinates.Average(c => c.Lng);
+
+            var distStart = CalculateDistance(segmentStart.Lat, segmentStart.Lng, centerLat, centerLng);
+            var distEnd = CalculateDistance(segmentEnd.Lat, segmentEnd.Lng, centerLat, centerLng);
+            var minDistance = Math.Min(distStart, distEnd);
+
+            String type;
+            string description;
+
+            if (minDistance < 1.0)
+            {
+                type = "DirectCrossing";
+                description = $"CRITICAL: Route directly crosses over airport '{aerodrome.Name}'! " +
+                              $"Distance: {minDistance:F2} km. FLIGHT PROHIBITED without CCAA approval!";
+            }
+            else if (minDistance < 3.0)
+            {
+                type = "WithinNoFlyZone";
+                description = $"Route passes through the no-fly zone of airport '{aerodrome.Name}'. " +
+                              $"Distance: {minDistance:F2} km. CCAA approval required.";
+            }
+            else
+            {
+                type = "NearNoFlyZone";
+                description = $"Route is near airport '{aerodrome.Name}'. " +
+                              $"Distance: {minDistance:F2} km. Verification recommended.";
+            }
+
+            return new AirspaceViolationDto
+            {
+                AirportName = !string.IsNullOrEmpty(aerodrome.Name) ? aerodrome.Name : "Airport",
+                MinDistanceKm = minDistance,
+                ViolatingPointIndices = new List<int> { segmentIndex, segmentIndex + 1 },
+                Type = type,
+                Description = description
+            };
+
+        }
+
+        private double CalculateDistance(double lat1, double lng1, double lat2, double lng2)
+        {
+            const double R = 6371.0; 
+            var dLat = (lat2 - lat1) * Math.PI / 180;
+            var dLng = (lng2 - lng1) * Math.PI / 180;
+
+            var a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2) +
+                    Math.Cos(lat1 * Math.PI / 180) * Math.Cos(lat2 * Math.PI / 180) *
+                    Math.Sin(dLng / 2) * Math.Sin(dLng / 2);
+
+            var c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
+            return R * c;
         }
     }
 }
