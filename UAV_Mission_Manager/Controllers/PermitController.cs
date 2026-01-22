@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using UAV_Mission_Manager_BAL.Services.PermitService;
+using UAV_Mission_Manager_DTO.Models.PathPlanning;
 using UAV_Mission_Manager_DTO.Models.PermitDto;
 using UAV_Mission_Manager_DTO.Models.Task;
 
@@ -79,6 +80,35 @@ namespace UAV_Mission_Manager_API.Controllers
                 {
                     message = "Access denied"
                 });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Check if route crosses controlled airspace (airports)
+        /// </summary>
+        /// <param name="routePoints">Optimized route points from path planning</param>
+        /// <returns>Airspace violation check result</returns>
+        /// <response code="200">Returns airspace check result</response>
+        /// <response code="400">Invalid request data</response>
+        /// <response code="500">Internal server error</response>
+        [HttpPost("checkairspace")]
+        public async Task<IActionResult> CheckAirspace([FromBody] List<PointDto> routePoints)
+        {
+            try
+            {
+                if (routePoints == null || routePoints.Count < 2)
+                    return BadRequest("At least 2 route points are required.");
+
+                var result = await _permitService.CheckAirspaceViolation(routePoints);
+
+                if (!result.Success)
+                    return BadRequest(result);
+
+                return Ok(result);
             }
             catch (Exception ex)
             {
