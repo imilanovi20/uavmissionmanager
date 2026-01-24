@@ -1,3 +1,5 @@
+import type { TaskType } from "../utils/constants";
+
 export interface Task {
   id: number;
   order: number;
@@ -6,12 +8,9 @@ export interface Task {
   uavId?: number;
 }
 
-export const TaskType = {
-  Takeoff: 'Takeoff',
-  MoveToPosition: 'MoveToPosition',
-  Land: 'Land',
-  ExecuteCommand: 'ExecuteCommand',
-  ChangeFormation: 'ChangeFormation'
-} as const;
-
-export type TaskType = typeof TaskType[keyof typeof TaskType];
+export interface CreateTaskDto {
+  order: number;
+  type: TaskType;
+  parameters?: string;
+  uavId?: number;
+}
