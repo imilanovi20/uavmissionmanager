@@ -1,4 +1,4 @@
-import type { Mission } from "../types/mission.types";
+import type { CreateMissionDto, CreateMissionResponseDto, Mission } from "../types/mission.types";
 import { ENDPOINTS } from "../utils/constants";
 import { api } from "./api";
 
@@ -21,10 +21,10 @@ class MissionService {
             throw error;
         }
     }
-    
-    async createMission(missionData: Partial<Mission>): Promise<Mission> {
+
+    async createMission(missionData: CreateMissionDto): Promise<CreateMissionResponseDto> {
         try {
-            const response = await api.post<Mission>(ENDPOINTS.MISSIONS, missionData);
+            const response = await api.post<CreateMissionResponseDto>(ENDPOINTS.MISSIONS, missionData);
             return response.data;
         } catch (error) {
             throw error;

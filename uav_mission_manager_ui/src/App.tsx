@@ -8,6 +8,7 @@ import AddUserPage from './pages/Users/AddUser/AddUser';
 import Layout from './components/Layouts/Layout';
 import ProtectedAdminRoute from './components/Protected/ProtectedAdminRoute';
 import ProtectedRoute from './components/Protected/ProtectedRoute';
+import AddMissionPage from './pages/Mission/AddMission/AddMission';
 
 function App() {
   return (
@@ -17,6 +18,7 @@ function App() {
         <Route path="/" element={<Layout />}>
         <Route element={<ProtectedRoute />}>
           <Route path="missions" element={<MissionPage />} />
+          <Route path="missions/new" element={<AddMissionPage />} />
           <Route path="uavs" element={<UAVPage />} />
           <Route path="users" element={<UserPage />} />
             <Route element={<ProtectedAdminRoute />}>

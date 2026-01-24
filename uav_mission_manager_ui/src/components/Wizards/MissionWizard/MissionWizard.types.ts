@@ -1,6 +1,6 @@
-import type { CreateWaypointDto } from '../../../types/mission.types';
 import type { UAV } from '../../../types/uav.types';
 import type { User } from '../../../types/user.types';
+import type { CreateWaypointDto } from '../../../types/waypoint.types';
 
 export interface GeneralInfoData {
   name: string;
@@ -37,3 +37,17 @@ export interface StepProps<T = any> {
   onUpdate: (data: Partial<T>) => void;
   onNext?: () => void;
 }
+
+export interface MissionWizardProps {
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+export const STEPS = [
+  'General Info',
+  'Select UAVs',
+  'Formation',
+  'Responsible Persons',
+  'Waypoints',
+  'Summary'
+];
