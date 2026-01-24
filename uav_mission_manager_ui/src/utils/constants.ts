@@ -6,9 +6,20 @@ export const ENDPOINTS = {
   USERS: '/user',
   UAVS: '/uav',
   EQUIPMENT: '/equipment',
+  MISSIONS: '/mission'
 } as const;
 
 export const STORAGE_KEYS = {
   TOKEN: 'auth_token',
   USER: 'auth_user',
 } as const;
+
+export const TaskType = {
+  Takeoff: 'Takeoff',
+  MoveToPosition: 'MoveToPosition',
+  Land: 'Land',
+  ExecuteCommand: 'ExecuteCommand',
+  ChangeFormation: 'ChangeFormation'
+} as const;
+
+export type TaskType = typeof TaskType[keyof typeof TaskType];

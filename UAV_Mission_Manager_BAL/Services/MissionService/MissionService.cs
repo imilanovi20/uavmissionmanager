@@ -260,9 +260,25 @@ namespace UAV_Mission_Manager_BAL.Services.MissionService
             return MapToDto(mission);
         }
 
-        public Task<IEnumerable<MissionDto>> GetUserMissionsAsync()
+        public async Task<IEnumerable<MissionDto>> GetUserMissionsAsync(string username)
         {
-            throw new NotImplementedException();
+            var missions = await _missionRepository.GetAll()
+                .Include(m => m.WeatherData)
+                .Include(m => m.MissionUAVs)
+                    .ThenInclude(mu => mu.UAV)
+                        .ThenInclude(u => u.UAV_AdditionalEquipments)
+                            .ThenInclude(uae => uae.AdditionalEquipment)
+                .Include(m => m.MissionUsers)
+                    .ThenInclude(mu => mu.User)
+                        .ThenInclude(u => u.UserRole)
+                .Include(m => m.Waypoints)
+                    .ThenInclude(w => w.Tasks)
+                .Include(m => m.Formations)
+                    .ThenInclude(f => f.UAVPositions)
+                .Where(m => m.MissionUsers.Any(mu => mu.Username == username))
+                .ToListAsync();
+
+            return missions.Select(MapToDto);
         }
 
         public async Task<UpdateWeatherDto> UpdateWeatherForMissionAsync(int missionId)
