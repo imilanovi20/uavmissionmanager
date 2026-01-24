@@ -76,7 +76,7 @@ const PreviewContent = styled.div`
 
 // Extend User type to include username as id for SelectionModal
 interface UserWithUsernameId extends UserType {
-  id: string; // Override id to be username
+  id: string; 
 }
 
 const ResponsiblePersonsStep = ({ data, onUpdate }: StepProps<ResponsiblePersonsData>) => {

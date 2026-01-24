@@ -1,33 +1,339 @@
-import { SelectableCard, Grid } from '../MissionWizard.styles';
-import type { StepProps, FormationData } from '../MissionWizard.types';
+import { useState, useRef, useEffect } from 'react';
+import { Plane, X } from 'lucide-react';
+import type { StepProps, FormationData, UAVPosition } from '../MissionWizard.types';
+import type { UAV } from '../../../../types/uav.types';
+import {
+  FormationContainer,
+  UAVListSection,
+  UAVListTitle,
+  UAVListGrid,
+  UAVListItem,
+  UAVListImage,
+  UAVListImagePlaceholder,
+  UAVListContent,
+  UAVListName,
+  UAVListType,
+  FormationBuilderSection,
+  FormationTypeSelector,
+  FormationTypeButton,
+  CoordinateSystemContainer,
+  CoordinateGrid,
+  CoordinateDropZone,
+  PlacedUAV,
+  PlacedUAVContent,
+  PlacedUAVImage,
+  PlacedUAVImagePlaceholder,
+  PlacedUAVLabel,
+  RemoveButton,
+  InstructionText,
+  CoordinateInfo,
+  AutoArrangeButton
+} from './FormationBuilder.styles';
 
-const FORMATION_TYPES = [
-  { type: 'Line', description: 'Standard line formation' },
-  { type: 'Grid', description: 'Standard grid formation' },
-  { type: 'V-Formation', description: 'Standard v-formation' },
-  { type: 'Circle', description: 'Standard circle formation' }
-];
+interface FormationStepProps extends StepProps<FormationData> {
+  selectedUAVs: UAV[];
+}
 
-const FormationStep = ({ data, onUpdate }: StepProps<FormationData>) => {
+interface PlacedUAVPosition {
+  uavId: number;
+  x: number; // percentage 0-100
+  y: number; // percentage 0-100
+}
+
+const FORMATION_TYPES = ['Custom', 'Line', 'Grid', 'V-Formation', 'Circle'];
+
+const FormationStep = ({ data, selectedUAVs, onUpdate }: FormationStepProps) => {
+  // Initialize from parent state (convert backend format to UI format)
+  const initialPositions = data.positions.map(p => ({
+    uavId: p.uavId,
+    x: (p.positionX / 2) + 50,  // -100 to 100 → 0-100%
+    y: (p.positionY / 2) + 50   // -100 to 100 → 0-100%
+  }));
+  
+  const [placedUAVs, setPlacedUAVs] = useState<PlacedUAVPosition[]>(initialPositions);
+  const [draggedUAVId, setDraggedUAVId] = useState<number | null>(null);
+  const dropZoneRef = useRef<HTMLDivElement>(null);
+
+  // Convert placed UAVs (0-100%) to backend format (-100 to 100) and sync to parent
+  useEffect(() => {
+    const positions: UAVPosition[] = placedUAVs.map(p => ({
+      uavId: p.uavId,
+      positionX: (p.x - 50) * 2,  // 0-100 → -100 to 100
+      positionY: (p.y - 50) * 2,  // 0-100 → -100 to 100
+      positionZ: 0
+    }));
+    
+    onUpdate({ positions });
+  }, [placedUAVs]);
+
+  const isUAVPlaced = (uavId: number) => {
+    return placedUAVs.some(p => p.uavId === uavId);
+  };
+
+  const handleDragStart = (uav: UAV) => {
+    if (!isUAVPlaced(uav.id)) {
+      setDraggedUAVId(uav.id);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    
+    if (!draggedUAVId || !dropZoneRef.current) return;
+    
+    const rect = dropZoneRef.current.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    
+    const constrainedX = Math.max(0, Math.min(100, x));
+    const constrainedY = Math.max(0, Math.min(100, y));
+    
+    setPlacedUAVs([...placedUAVs, {
+      uavId: draggedUAVId,
+      x: constrainedX,
+      y: constrainedY
+    }]);
+    
+    setDraggedUAVId(null);
+  };
+
+  const handleRemoveUAV = (uavId: number) => {
+    setPlacedUAVs(placedUAVs.filter(p => p.uavId !== uavId));
+  };
+
+  const handlePlacedUAVDragStart = (uavId: number) => {
+    if (data.formationType === 'Custom') {
+      setDraggedUAVId(uavId);
+    }
+  };
+
+  const handlePlacedUAVDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    
+    if (!draggedUAVId || !dropZoneRef.current) return;
+    
+    const rect = dropZoneRef.current.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    
+    const constrainedX = Math.max(0, Math.min(100, x));
+    const constrainedY = Math.max(0, Math.min(100, y));
+    
+    setPlacedUAVs(placedUAVs.map(p => 
+      p.uavId === draggedUAVId 
+        ? { ...p, x: constrainedX, y: constrainedY }
+        : p
+    ));
+    
+    setDraggedUAVId(null);
+  };
+
+  const autoArrange = () => {
+    if (selectedUAVs.length === 0) return;
+    
+    const positions: PlacedUAVPosition[] = [];
+    
+    switch (data.formationType) {
+      case 'Line':
+        selectedUAVs.forEach((uav, index) => {
+          const spacing = 80 / (selectedUAVs.length + 1);
+          positions.push({
+            uavId: uav.id,
+            x: 10 + spacing * (index + 1),
+            y: 50
+          });
+        });
+        break;
+        
+      case 'Grid':
+        const cols = Math.ceil(Math.sqrt(selectedUAVs.length));
+        selectedUAVs.forEach((uav, index) => {
+          const row = Math.floor(index / cols);
+          const col = index % cols;
+          const rows = Math.ceil(selectedUAVs.length / cols);
+          positions.push({
+            uavId: uav.id,
+            x: 20 + (col * 60 / (cols - 1 || 1)),
+            y: 20 + (row * 60 / (rows - 1 || 1))
+          });
+        });
+        break;
+        
+      case 'V-Formation':
+        selectedUAVs.forEach((uav, index) => {
+          const middle = Math.floor(selectedUAVs.length / 2);
+          const offset = Math.abs(index - middle);
+          let x = 50;
+          if (index !== middle) {
+            x = 50 + (index < middle ? -1 : 1) * offset * 10;
+          }
+          positions.push({
+            uavId: uav.id,
+            x: x,
+            y: 20 + (index * 60 / (selectedUAVs.length - 1 || 1))
+          });
+        });
+        break;
+        
+      case 'Circle':
+        selectedUAVs.forEach((uav, index) => {
+          const angle = (index / selectedUAVs.length) * 2 * Math.PI;
+          const radius = 30;
+          positions.push({
+            uavId: uav.id,
+            x: 50 + radius * Math.cos(angle),
+            y: 50 + radius * Math.sin(angle)
+          });
+        });
+        break;
+        
+      case 'Custom':
+      default:
+        selectedUAVs.forEach((uav, index) => {
+          positions.push({
+            uavId: uav.id,
+            x: 40 + (index * 5),
+            y: 40 + (index * 5)
+          });
+        });
+    }
+    
+    setPlacedUAVs(positions);
+  };
+
+  const getUAVById = (id: number) => selectedUAVs.find(u => u.id === id);
+
   return (
     <div>
       <h3 style={{ marginTop: 0, marginBottom: '1rem', fontSize: '1.125rem' }}>
-        Select Initial Formation
+        Formation Builder
       </h3>
-      <Grid>
-        {FORMATION_TYPES.map(({ type, description }) => (
-          <SelectableCard
+      
+      <FormationTypeSelector>
+        {FORMATION_TYPES.map(type => (
+          <FormationTypeButton
             key={type}
-            selected={data.formationType === type}
+            $active={data.formationType === type}
             onClick={() => onUpdate({ formationType: type })}
           >
-            <h4 style={{ margin: 0 }}>{type}</h4>
-            <p style={{ margin: '0.5rem 0 0 0', color: '#6b7280', fontSize: '0.875rem' }}>
-              {description}
-            </p>
-          </SelectableCard>
+            {type}
+          </FormationTypeButton>
         ))}
-      </Grid>
+      </FormationTypeSelector>
+
+      <FormationContainer>
+        <UAVListSection>
+          <UAVListTitle>Selected UAVs ({selectedUAVs.length})</UAVListTitle>
+          <UAVListGrid>
+            {selectedUAVs.map(uav => (
+              <UAVListItem
+                key={uav.id}
+                $placed={isUAVPlaced(uav.id)}
+                draggable={!isUAVPlaced(uav.id)}
+                onDragStart={() => handleDragStart(uav)}
+              >
+                {uav.imagePath && uav.imagePath !== '' && uav.imagePath !== '/' ? (
+                  <UAVListImage src={uav.imagePath} alt={uav.name} />
+                ) : (
+                  <UAVListImagePlaceholder>
+                    <Plane size={20} />
+                  </UAVListImagePlaceholder>
+                )}
+                <UAVListContent>
+                  <UAVListName>{uav.name}</UAVListName>
+                  <UAVListType>{uav.type}</UAVListType>
+                </UAVListContent>
+              </UAVListItem>
+            ))}
+          </UAVListGrid>
+        </UAVListSection>
+
+        <FormationBuilderSection>
+          <CoordinateSystemContainer>
+            <CoordinateGrid>
+              {[0, 25, 50, 75, 100].map(x => (
+                <line
+                  key={`v${x}`}
+                  x1={`${x}%`}
+                  y1="0%"
+                  x2={`${x}%`}
+                  y2="100%"
+                  stroke="#e5e7eb"
+                  strokeWidth={x === 50 ? "2" : "1"}
+                  strokeDasharray={x === 50 ? "none" : "5,5"}
+                />
+              ))}
+              
+              {[0, 25, 50, 75, 100].map(y => (
+                <line
+                  key={`h${y}`}
+                  x1="0%"
+                  y1={`${y}%`}
+                  x2="100%"
+                  y2={`${y}%`}
+                  stroke="#e5e7eb"
+                  strokeWidth={y === 50 ? "2" : "1"}
+                  strokeDasharray={y === 50 ? "none" : "5,5"}
+                />
+              ))}
+            </CoordinateGrid>
+
+            <CoordinateDropZone
+              ref={dropZoneRef}
+              onDragOver={handleDragOver}
+              onDrop={data.formationType === 'Custom' ? handlePlacedUAVDrop : handleDrop}
+            >
+              {placedUAVs.map(placed => {
+                const uav = getUAVById(placed.uavId);
+                if (!uav) return null;
+                
+                return (
+                  <PlacedUAV
+                    key={placed.uavId}
+                    $x={placed.x}
+                    $y={placed.y}
+                    draggable={data.formationType === 'Custom'}
+                    onDragStart={() => handlePlacedUAVDragStart(placed.uavId)}
+                  >
+                    <PlacedUAVContent>
+                      {uav.imagePath && uav.imagePath !== '' && uav.imagePath !== '/' ? (
+                        <PlacedUAVImage src={uav.imagePath} alt={uav.name} />
+                      ) : (
+                        <PlacedUAVImagePlaceholder>
+                          <Plane size={24} />
+                        </PlacedUAVImagePlaceholder>
+                      )}
+                      <PlacedUAVLabel>{uav.name}</PlacedUAVLabel>
+                    </PlacedUAVContent>
+                    <RemoveButton onClick={() => handleRemoveUAV(placed.uavId)}>
+                      <X size={12} />
+                    </RemoveButton>
+                  </PlacedUAV>
+                );
+              })}
+            </CoordinateDropZone>
+
+            <CoordinateInfo>
+              Placed: {placedUAVs.length} / {selectedUAVs.length}
+            </CoordinateInfo>
+          </CoordinateSystemContainer>
+
+          <AutoArrangeButton onClick={autoArrange}>
+            Auto-Arrange {data.formationType} Formation
+          </AutoArrangeButton>
+
+          <InstructionText>
+            {data.formationType === 'Custom' 
+              ? 'Drag UAVs from the list to position them. Drag placed UAVs to reposition.'
+              : `Drag UAVs to the grid or click "Auto-Arrange" to use ${data.formationType} formation.`
+            }
+          </InstructionText>
+        </FormationBuilderSection>
+      </FormationContainer>
     </div>
   );
 };
