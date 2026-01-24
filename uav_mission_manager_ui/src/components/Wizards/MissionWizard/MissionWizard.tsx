@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, type SetStateAction } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { useUAV } from "../../../hooks/useUAVs";
@@ -158,14 +158,14 @@ const MissionWizard = () => {
                 return (
                     <GeneralInfoStep
                         data={generalInfo}
-                        onUpdate={(update) => setGeneralInfo({ ...generalInfo, ...update })}
+                        onUpdate={(update: SetStateAction<GeneralInfoData>) => setGeneralInfo({ ...generalInfo, ...update })}
                     />
                 );
             case 1:
                 return (
                     <UAVSelectionStep
                         data={uavSelection}
-                        onUpdate={(update) => setUAVSelection({ ...uavSelection, ...update })}
+                        onUpdate={(update: SetStateAction<UAVSelectionData>) => setUAVSelection({ ...uavSelection, ...update })}
                     />
                 );
             case 2:
@@ -195,7 +195,7 @@ const MissionWizard = () => {
                             locationLat: generalInfo.locationLat,
                             locationLon: generalInfo.locationLon
                         }}
-                        onUpdate={(update) => setWaypointsData({ ...waypointsData, ...update })}
+                        onUpdate={(update: SetStateAction<WaypointsData>) => setWaypointsData({ ...waypointsData, ...update })}
                     />
                 );
             case 5:

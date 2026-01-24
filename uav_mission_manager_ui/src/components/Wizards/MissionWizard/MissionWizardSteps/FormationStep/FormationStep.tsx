@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Plane, X } from 'lucide-react';
-import type { StepProps, FormationData, UAVPosition } from '../MissionWizard.types';
-import type { UAV } from '../../../../types/uav.types';
+import type { StepProps, FormationData, UAVPosition } from '../../MissionWizard.types';
+import type { UAV } from '../../../../../types/uav.types';
 import {
   FormationContainer,
   UAVListSection,
