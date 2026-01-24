@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { Plus, Plane } from 'lucide-react';
-import type { StepProps, UAVSelectionData } from '../MissionWizard.types';
-import SelectionModal from '../../../Selection/SelectionModal/SelectionModal';
-import type { UAV } from '../../../../types/uav.types';
+import { Plus, User } from 'lucide-react';
+import type { StepProps, ResponsiblePersonsData } from '../../MissionWizard.types';
+import type { User as UserType } from '../../../../../types/user.types';
 import styled from 'styled-components';
+import SelectionModal from '../../../../Selection/SelectionModal/SelectionModal';
 
 const AddButton = styled.button`
   display: flex;
@@ -49,7 +49,7 @@ const PreviewImage = styled.img`
   width: 60px;
   height: 60px;
   object-fit: cover;
-  border-radius: 6px;
+  border-radius: 50%; /* Circular for user photos */
   background: #f3f4f6;
   flex-shrink: 0;
 `;
@@ -58,7 +58,7 @@ const PreviewImagePlaceholder = styled.div`
   width: 60px;
   height: 60px;
   background: #f3f4f6;
-  border-radius: 6px;
+  border-radius: 50%; /* Circular for user avatars */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -74,68 +74,81 @@ const PreviewContent = styled.div`
   min-width: 0;
 `;
 
-const UAVSelectionStep = ({ data, onUpdate }: StepProps<UAVSelectionData>) => {
+// Extend User type to include username as id for SelectionModal
+interface UserWithUsernameId extends UserType {
+  id: string; 
+}
+
+const ResponsiblePersonsStep = ({ data, onUpdate }: StepProps<ResponsiblePersonsData>) => {
   const [showModal, setShowModal] = useState(false);
 
   const handleConfirmSelection = (selectedIds: (number | string)[]) => {
-    onUpdate({ selectedUAVIds: selectedIds as number[] });
+    // selectedIds su već usernames jer smo tako mapirali
+    const selectedUsernames = selectedIds as string[];
+    onUpdate({ selectedUsernames });
   };
 
-  const selectedUAVs = data.availableUAVs.filter(uav =>
-    data.selectedUAVIds.includes(uav.id)
+  const selectedUsers = data.availableUsers.filter(user =>
+    data.selectedUsernames.includes(user.username)
   );
 
-  // Render function za UAV karticu u modalu
-  const renderUAVCard = (uav: UAV, isSelected: boolean) => (
+  // Render function za User karticu u modalu
+  const renderUserCard = (user: UserWithUsernameId, isSelected: boolean) => (
     <>
       <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 600, color: '#2e2e2e' }}>
-        {uav.name}
+        {user.username}
       </h4>
       <p style={{ margin: 0, color: '#6b7280', fontSize: '0.875rem' }}>
-        {uav.type}
+        {user.email}
       </p>
-      <p style={{ margin: 0, fontSize: '0.875rem', color: '#374151' }}>
-        Max Speed: {uav.maxSpeed} km/h
-      </p>
+      {user.role && (
+        <p style={{ margin: 0, fontSize: '0.875rem', color: '#374151' }}>
+          Role: {user.role}
+        </p>
+      )}
     </>
   );
 
-  // Placeholder ikona za UAV-ove bez slike
-  const renderPlaceholder = () => <Plane size={32} />;
+  // Placeholder ikona za User-e bez slike
+  const renderPlaceholder = () => <User size={32} />;
+
+  // Mapiraj users da koriste username kao id (za SelectionModal)
+  const usersWithUsernameId: UserWithUsernameId[] = data.availableUsers.map(user => ({
+    ...user,
+    id: user.username // Username je id za selekciju
+  }));
 
   return (
     <div>
       <h3 style={{ marginTop: 0, marginBottom: '1rem', fontSize: '1.125rem' }}>
-        Select UAVs for this mission
+        Select Responsible Persons
       </h3>
 
-      {selectedUAVs.length > 0 && (
+      {selectedUsers.length > 0 && (
         <>
           <h4 style={{ fontSize: '0.95rem', color: '#6b7280', marginBottom: '0.75rem' }}>
-            Selected UAVs ({selectedUAVs.length})
+            Selected Persons ({selectedUsers.length})
           </h4>
           <SelectedItemsGrid>
-            {selectedUAVs.map((uav) => (
-              <SelectedItemCard key={uav.id}>
+            {selectedUsers.map((user) => (
+              <SelectedItemCard key={user.username}>
                 {/* Image ili placeholder */}
-                {uav.imagePath && uav.imagePath !== '' && uav.imagePath !== '/' ? (
-                  <PreviewImage src={uav.imagePath} alt={uav.name} />
+                {user.imagePath && user.imagePath !== '' && user.imagePath !== '/' ? (
+                  <PreviewImage src={user.imagePath} alt={user.username} />
                 ) : (
                   <PreviewImagePlaceholder>
-                    <Plane size={24} />
+                    <User size={24} />
                   </PreviewImagePlaceholder>
                 )}
 
                 {/* Content */}
                 <PreviewContent>
                   <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 600 }}>
-                    {uav.name}
+                    {user.username}
                   </h4>
-                  <p style={{ margin: 0, color: '#6b7280', fontSize: '0.8rem' }}>
-                    {uav.type}
-                  </p>
-                  <p style={{ margin: 0, fontSize: '0.8rem' }}>
-                    {uav.maxSpeed} km/h
+                  <p style={{ margin: 0, color: '#6b7280', fontSize: '0.8rem', 
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {user.email}
                   </p>
                 </PreviewContent>
               </SelectedItemCard>
@@ -146,30 +159,30 @@ const UAVSelectionStep = ({ data, onUpdate }: StepProps<UAVSelectionData>) => {
 
       <AddButton onClick={() => setShowModal(true)}>
         <Plus size={24} />
-        {selectedUAVs.length > 0 ? 'Change UAV Selection' : 'Add UAVs'}
+        {selectedUsers.length > 0 ? 'Change Person Selection' : 'Add Responsible Persons'}
       </AddButton>
 
       <p style={{ marginTop: '1rem', color: '#6b7280', fontSize: '0.875rem', textAlign: 'center' }}>
-        {selectedUAVs.length === 0
-          ? 'Click the button above to select UAVs'
-          : `${selectedUAVs.length} UAV(s) selected`}
+        {selectedUsers.length === 0
+          ? 'Click the button above to select responsible persons'
+          : `${selectedUsers.length} person(s) selected`}
       </p>
 
       {showModal && (
-        <SelectionModal<UAV>
-          title="Select UAVs"
-          items={data.availableUAVs}
-          selectedIds={data.selectedUAVIds}
+        <SelectionModal<UserWithUsernameId>
+          title="Select Responsible Persons"
+          items={usersWithUsernameId}
+          selectedIds={data.selectedUsernames} // Direktno usernames
           onConfirm={handleConfirmSelection}
           onClose={() => setShowModal(false)}
-          renderCard={renderUAVCard}
+          renderCard={renderUserCard}
           renderPlaceholder={renderPlaceholder}
           itemsPerPage={6}
-          itemLabel="UAV"
+          itemLabel="person"
         />
       )}
     </div>
   );
 };
 
-export default UAVSelectionStep;
+export default ResponsiblePersonsStep;

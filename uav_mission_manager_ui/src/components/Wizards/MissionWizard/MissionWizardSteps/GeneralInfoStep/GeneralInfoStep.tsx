@@ -1,5 +1,5 @@
-import { FormGroup, Label, Input, TextArea } from '../MissionWizard.styles';
-import type { StepProps, GeneralInfoData } from '../MissionWizard.types';
+import { FormGroup, Label, Input, TextArea } from '../../MissionWizard.styles';
+import type { StepProps, GeneralInfoData } from '../../MissionWizard.types';
 
 const GeneralInfoStep = ({ data, onUpdate }: StepProps<GeneralInfoData>) => {
   return (

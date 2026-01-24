@@ -1,6 +1,6 @@
-export { default as GeneralInfoStep } from './GeneralInfoStep';
-export { default as UAVSelectionStep } from './UAVSelectionStep';
-export { default as FormationStep } from './FormationStep';
-export { default as ResponsiblePersonsStep } from './ResponsiblePersonsStep';
-export { default as WaypointsStep } from './WaypointsStep';
-export { default as SummaryStep } from './SummaryStep';
+export { default as GeneralInfoStep } from './GeneralInfoStep/GeneralInfoStep';
+export { default as UAVSelectionStep } from './UAVSelectionStep/UAVSelectionStep';
+export { default as FormationStep } from './FormationStep/FormationStep';
+export { default as ResponsiblePersonsStep } from './ResponsiblePersonsStep/ResponsiblePersonsStep';
+export { default as WaypointsStep } from './WaypointStep/WaypointsStep';
+export { default as SummaryStep } from './SummaryStep/SummaryStep';

@@ -1,4 +1,4 @@
-import type { StepProps, SummaryData } from '../MissionWizard.types';
+import type { StepProps, SummaryData } from '../../MissionWizard.types';
 
 const SummaryStep = ({ data }: StepProps<SummaryData>) => {
   return (

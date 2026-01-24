@@ -1,6 +1,6 @@
-import { SecondaryButton } from '../MissionWizard.styles';
-import type { StepProps, WaypointsData } from '../MissionWizard.types';
-import type { CreateWaypointDto } from '../../../types/mission.types';
+import type { CreateWaypointDto } from '../../../../../types/waypoint.types';
+import { SecondaryButton } from '../../MissionWizard.styles';
+import type { StepProps, WaypointsData } from '../../MissionWizard.types';
 
 const WaypointsStep = ({ data, onUpdate }: StepProps<WaypointsData>) => {
   const addWaypoint = () => {
