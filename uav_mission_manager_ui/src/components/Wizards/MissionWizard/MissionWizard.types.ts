@@ -15,8 +15,16 @@ export interface UAVSelectionData {
   availableUAVs: UAV[];
 }
 
+export interface UAVPosition {
+  uavId: number;
+  positionX: number;
+  positionY: number;
+  positionZ: number;
+}
+
 export interface FormationData {
   formationType: string;
+  positions: UAVPosition[];
 }
 
 export interface ResponsiblePersonsData {

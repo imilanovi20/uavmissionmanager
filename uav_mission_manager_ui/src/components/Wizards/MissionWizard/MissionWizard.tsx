@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { useUAV } from "../../../hooks/useUAVs";
@@ -42,16 +42,17 @@ const MissionWizard = () => {
 
     const [uavSelection, setUAVSelection] = useState<UAVSelectionData>({
         selectedUAVIds: [],
-        availableUAVs: uavs
+        availableUAVs: []
     });
 
     const [formation, setFormation] = useState<FormationData>({
-        formationType: 'Line'
+        formationType: 'Line',
+        positions: []
     });
 
     const [responsiblePersons, setResponsiblePersons] = useState<ResponsiblePersonsData>({
         selectedUsernames: [],
-        availableUsers: users
+        availableUsers: []
     });
 
     const [waypointsData, setWaypointsData] = useState<WaypointsData>({
@@ -60,10 +61,19 @@ const MissionWizard = () => {
         locationLon: 16.0
     });
 
-    useState(() => {
-        setUAVSelection(prev => ({ ...prev, availableUAVs: uavs }));
-        setResponsiblePersons(prev => ({ ...prev, availableUsers: users }));
-    });
+    // Sync UAVs when loaded
+    useEffect(() => {
+        if (uavs && uavs.length > 0) {
+            setUAVSelection(prev => ({ ...prev, availableUAVs: uavs }));
+        }
+    }, [uavs]);
+
+    // Sync Users when loaded
+    useEffect(() => {
+        if (users && users.length > 0) {
+            setResponsiblePersons(prev => ({ ...prev, availableUsers: users }));
+        }
+    }, [users]);
 
     const handleNext = () => {
         if (currentStep < STEPS.length - 1) {
@@ -85,15 +95,20 @@ const MissionWizard = () => {
         try {
             setLoading(true);
 
-            const formationDto: CreateFormationDto = {
-                formationType: formation.formationType,
-                order: 0,
-                uavPositions: uavSelection.selectedUAVIds.map((uavId, index) => ({
+            // Use positions from formation state if available
+            const formationPositions = formation.positions.length > 0 
+                ? formation.positions
+                : uavSelection.selectedUAVIds.map((uavId, index) => ({
                     uavId,
                     positionX: index * 10,
                     positionY: 0,
                     positionZ: 0
-                }))
+                }));
+
+            const formationDto: CreateFormationDto = {
+                formationType: formation.formationType,
+                order: 0,
+                uavPositions: formationPositions
             };
 
             const missionData: CreateMissionDto = {
@@ -149,21 +164,26 @@ const MissionWizard = () => {
             case 1:
                 return (
                     <UAVSelectionStep
-                        data={{ ...uavSelection, availableUAVs: uavs }}
+                        data={uavSelection}
                         onUpdate={(update) => setUAVSelection({ ...uavSelection, ...update })}
                     />
                 );
             case 2:
+                const selectedUAVs = uavSelection.availableUAVs.filter(uav =>
+                    uavSelection.selectedUAVIds.includes(uav.id)
+                );
+
                 return (
                     <FormationStep
                         data={formation}
+                        selectedUAVs={selectedUAVs}  
                         onUpdate={(update) => setFormation({ ...formation, ...update })}
                     />
                 );
             case 3:
                 return (
                     <ResponsiblePersonsStep
-                        data={{ ...responsiblePersons, availableUsers: users }}
+                        data={responsiblePersons}
                         onUpdate={(update) => setResponsiblePersons({ ...responsiblePersons, ...update })}
                     />
                 );
@@ -182,10 +202,8 @@ const MissionWizard = () => {
                 const summaryData: SummaryData = {
                     ...generalInfo,
                     ...uavSelection,
-                    availableUAVs: uavs,
                     ...formation,
                     ...responsiblePersons,
-                    availableUsers: users,
                     ...waypointsData
                 };
                 return <SummaryStep data={summaryData} onUpdate={() => {}} />;
