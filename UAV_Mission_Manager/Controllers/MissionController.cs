@@ -18,6 +18,29 @@ namespace UAV_Mission_Manager_API.Controllers
         }
 
         /// <summary>
+        /// Get all missions
+        /// </summary>
+        [HttpGet]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetAllMissions()
+        {
+            try
+            {
+                var result = await _missionService.GetAllMissionsAsync();
+                return Ok(result);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { message = "Access denied" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = ex.Message });
+            }
+        }
+
+
+        /// <summary>
         /// Get mission by ID
         /// </summary>
         [HttpGet("{id}")]
@@ -41,6 +64,27 @@ namespace UAV_Mission_Manager_API.Controllers
             catch (Exception ex)
             {
                 return StatusCode(500, ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Get missions for the current user
+        /// </summary>
+        [HttpGet("user/{username}")]
+        public async Task<IActionResult> GetUserMissions(string username)
+        {
+            try
+            {
+                var result = await _missionService.GetUserMissionsAsync(username);
+                return Ok(result);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { message = "Access denied" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = ex.Message });
             }
         }
 
