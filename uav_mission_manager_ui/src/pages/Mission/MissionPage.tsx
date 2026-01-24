@@ -1,46 +1,32 @@
-import { useState } from "react";
 import FilterBar from "../../components/Bars/FilterBar/FilterBar";
 import BlackButton from "../../components/Buttons/BlackButton/BlackButton";
 import {  Header, HeaderTop,  PageContainer, Subtitle, Title } from "../../components/Containers/CardContainer.styles";
 import { useCurrentUser } from "../../hooks/useCurrentUser";
 import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 
 const MissionPage = () => {
   const navigate = useNavigate();
   const { isAdmin } = useCurrentUser();
-  const [ setShowWizard] = useState(false);
   const [showAllMissions, setShowAllMissions] = useState(false);
 
-//  const { missions, loading, error, refetchMissions } = useMissions(showAllMissions);
-/*
+
+  /*
   const handleMissionClick = (missionId: number) => {
     navigate(`/missions/${missionId}`);
   };
+  */
 
-  const handleWizardClose = () => {
-    setShowWizard(false);
+  const handleNewMission = () => {
+    navigate('/missions/new');
   };
-
+  
+  /*
   const handleWizardSuccess = () => {
-    refetchMissions();
+    missionService.getAllMissions();
   };
+  */
 
-  if (loading) {
-    return (
-      <PageContainer>
-        <LoadingSpinner>Loading missions...</LoadingSpinner>
-      </PageContainer>
-    );
-  }
-
-  if (error) {
-    return (
-      <PageContainer>
-        <ErrorMessage>{error}</ErrorMessage>
-      </PageContainer>
-    );
-  }
-    */
 
   return (
         <PageContainer>
@@ -53,7 +39,7 @@ const MissionPage = () => {
 
               <BlackButton
                 title="+ New Mission"
-                onClick={() => {}}
+                onClick={() => handleNewMission()}
                 disabled={false}
                 width="180px"
               />

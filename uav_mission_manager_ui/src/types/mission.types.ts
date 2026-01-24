@@ -31,3 +31,8 @@ export interface CreateMissionDto {
   initialFormation: CreateFormationDto;
   waypoints: CreateWaypointDto[];
 }
+
+export interface CreateMissionResponseDto {
+  mission: Mission;
+  response: string;
+}

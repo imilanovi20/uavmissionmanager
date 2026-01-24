@@ -1,28 +1,24 @@
 import styled from 'styled-components';
 
-export const WizardOverlay = styled.div`
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
+// Full page container instead of overlay
+export const WizardPageContainer = styled.div`
+  min-height: 100vh;
+  background: #f9fafb;
   padding: 2rem;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
 `;
 
 export const WizardContainer = styled.div`
   background: white;
   border-radius: 16px;
   width: 100%;
-  max-width: 900px;
-  max-height: 90vh;
+  max-width: 1400px;
+  min-height: 600px;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 `;
 
 export const WizardHeader = styled.div`
@@ -35,6 +31,27 @@ export const WizardTitle = styled.h2`
   font-weight: 600;
   color: #2e2e2e;
   margin: 0 0 1rem 0;
+`;
+
+export const QuitButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: white;
+  color: #6b7280;
+  border: 1px solid #e5e7eb;
+  padding: 0.625rem 1rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: #f9fafb;
+    border-color: #d1d5db;
+    color: #374151;
+  }
 `;
 
 export const StepIndicator = styled.div`
@@ -136,15 +153,23 @@ export const Label = styled.label`
   font-weight: 500;
   color: #374151;
   margin-bottom: 0.5rem;
+  margin: 0 auto 0.5rem auto;  
+  max-width: 900px;     
+  margin-left: auto;   
+  margin-right: auto; 
+  
 `;
 
 export const Input = styled.input`
   width: 100%;
+  max-width: 900px;
   padding: 0.75rem;
   border: 1px solid #d1d5db;
   border-radius: 6px;
   font-size: 1rem;
   transition: all 0.2s ease;
+  margin: 0 auto;  
+  display: block; 
 
   &:focus {
     outline: none;
@@ -156,6 +181,7 @@ export const Input = styled.input`
 export const TextArea = styled.textarea`
   width: 100%;
   padding: 0.75rem;
+  max-width: 900px;
   border: 1px solid #d1d5db;
   border-radius: 6px;
   font-size: 1rem;
@@ -163,6 +189,8 @@ export const TextArea = styled.textarea`
   resize: vertical;
   font-family: inherit;
   transition: all 0.2s ease;
+  margin: 0 auto;  
+  display: block; 
 
   &:focus {
     outline: none;
