@@ -1,3 +1,5 @@
+import type { PointDto } from "./pathPlanning.types";
+
 export interface WeatherData {
     id: number;
     temperature: number;
@@ -15,4 +17,9 @@ export interface CreateWeatherDataDto {
     isSafeForFlight: boolean;
     fetchedAt: string;
     iconCode: number;
+}
+
+export interface GetWeatherDataDto {
+    date: string; 
+    points: PointDto[];
 }

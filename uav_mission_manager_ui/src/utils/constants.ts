@@ -7,7 +7,9 @@ export const ENDPOINTS = {
   UAVS: '/uav',
   EQUIPMENT: '/equipment',
   MISSIONS: '/mission',
-  PATH: '/path'
+  PATH: '/path',
+  WEATHER: '/weather',
+  PERMIT: '/permit'
 } as const;
 
 export const STORAGE_KEYS = {
