@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using UAV_Mission_Manager_DTO.Models.PathPlanning;
 using UAV_Mission_Manager_DTO.Models.WeatherData;
 
 namespace UAV_Mission_Manager_BAL.Services.WeatherService
@@ -18,11 +19,12 @@ namespace UAV_Mission_Manager_BAL.Services.WeatherService
         {
             _httpClient = httpClient;
         }
-        public async Task<WeatherDataDto> GetWeatherForecastAsync(DateTime date, double latitude = 45.815, double longitude = 15.9819)
+        public async Task<WeatherDataDto> GetWeatherForecastAsync(GetWeatherDataDto dto)
         {
             try
             {
-                var dateStr = date.ToString("yyyy-MM-dd");
+                var dateStr = dto.Date.ToString("yyyy-MM-dd");
+                (double latitude, double longitude) = FindCenter(dto.Points);
 
                 var url = $"{OpenMeteoBaseUrl}?" +
                          $"latitude={latitude.ToString(System.Globalization.CultureInfo.InvariantCulture)}&" +
@@ -64,6 +66,45 @@ namespace UAV_Mission_Manager_BAL.Services.WeatherService
             {
                 throw new Exception("Failed to fetch weather forecast. Please try again later.", ex);
             }
+        }
+
+        private (double latitude, double longitude) FindCenter(List<PointDto> points)
+        {
+            if (points == null || points.Count == 0)
+            {
+                throw new ArgumentException("Points list cannot be null or empty");
+            }
+
+            if (points.Count == 1)
+            {
+                return (points[0].Lat, points[0].Lng);
+            }
+
+            double x = 0, y = 0, z = 0;
+
+            foreach (var point in points)
+            {
+                double latRad = point.Lat * Math.PI / 180.0;
+                double lonRad = point.Lng * Math.PI / 180.0;
+
+                x += Math.Cos(latRad) * Math.Cos(lonRad);
+                y += Math.Cos(latRad) * Math.Sin(lonRad);
+                z += Math.Sin(latRad);
+            }
+
+            int total = points.Count;
+            x /= total;
+            y /= total;
+            z /= total;
+
+            double centralLongitude = Math.Atan2(y, x);
+            double centralSquareRoot = Math.Sqrt(x * x + y * y);
+            double centralLatitude = Math.Atan2(z, centralSquareRoot);
+            
+            double latitude = centralLatitude * 180.0 / Math.PI;
+            double longitude = centralLongitude * 180.0 / Math.PI;
+
+            return (latitude, longitude);
         }
 
         private bool IsSafeForFlight(double temperature, double windSpeed)

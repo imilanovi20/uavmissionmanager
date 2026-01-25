@@ -18,37 +18,39 @@ namespace UAV_Mission_Manager_API.Controllers
             _weatherService = weatherService;
         }
 
-        [HttpGet]
-        public async Task<IActionResult> GetWeatherForecast(
-            [FromQuery] DateTime date,
-            [FromQuery] double latitude,  
-            [FromQuery] double longitude)  
+        [HttpPost("forecast")]
+        public async Task<IActionResult> GetWeatherForecast([FromBody] GetWeatherDataDto dto)
         {
             try
             {
-                if (date.Date < DateTime.Today)
+                if (dto.Date.Date < DateTime.Today)
                 {
                     return BadRequest(new
                     {
                         message = "Cannot fetch weather data for past dates",
-                        providedDate = date.ToString("yyyy-MM-dd"),
+                        providedDate = dto.Date.ToString("yyyy-MM-dd"),
                         today = DateTime.Today.ToString("yyyy-MM-dd")
                     });
                 }
 
-                // Validacija koordinata
-                if (latitude < -90 || latitude > 90)
+                if (dto.Points == null || dto.Points.Count == 0)
                 {
-                    return BadRequest(new { message = "Latitude must be between -90 and 90" });
+                    return BadRequest(new { message = "At least one point is required" });
                 }
 
-                if (longitude < -180 || longitude > 180)
+                foreach (var point in dto.Points)
                 {
-                    return BadRequest(new { message = "Longitude must be between -180 and 180" });
+                    if (point.Lat < -90 || point.Lat > 90)
+                    {
+                        return BadRequest(new { message = $"Latitude must be between -90 and 90. Invalid value: {point.Lat}" });
+                    }
+                    if (point.Lng < -180 || point.Lng > 180)
+                    {
+                        return BadRequest(new { message = $"Longitude must be between -180 and 180. Invalid value: {point.Lng}" });
+                    }
                 }
 
-                var weatherData = await _weatherService.GetWeatherForecastAsync(date, latitude, longitude);
-
+                var weatherData = await _weatherService.GetWeatherForecastAsync(dto);
                 return Ok(weatherData);
             }
             catch (UnauthorizedAccessException ex)
@@ -60,7 +62,7 @@ namespace UAV_Mission_Manager_API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, ex.Message);
+                return StatusCode(500, new { message = ex.Message });
             }
         }
     }

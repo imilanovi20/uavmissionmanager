@@ -9,6 +9,6 @@ namespace UAV_Mission_Manager_BAL.Services.WeatherService
 {
     public interface IWeatherService
     {
-        Task<WeatherDataDto> GetWeatherForecastAsync(DateTime date, double latitude = 45.8150, double longitude = 15.9819);
+        Task<WeatherDataDto> GetWeatherForecastAsync(GetWeatherDataDto dto);
     }
 }
