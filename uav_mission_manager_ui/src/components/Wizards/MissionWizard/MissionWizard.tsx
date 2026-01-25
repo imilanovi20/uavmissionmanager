@@ -3,11 +3,28 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { useUAV } from "../../../hooks/useUAVs";
 import { useUsers } from "../../../hooks/useUsers";
-import { STEPS, type FormationData, type GeneralInfoData, type ResponsiblePersonsData, type SummaryData, type UAVSelectionData, type WaypointsData } from "./MissionWizard.types";
+import { 
+  STEPS, 
+  type FormationData, 
+  type GeneralInfoData, 
+  type ResponsiblePersonsData, 
+  type SummaryData, 
+  type UAVSelectionData, 
+  type WaypointsData 
+} from "./MissionWizard.types";
+import type { RouteOptimizationData } from "../../../types/pathPlanning.types";
 import type { CreateMissionDto } from "../../../types/mission.types";
 import { missionService } from "../../../services/mission.service";
 import type { CreateFormationDto } from "../../../types/formation.types";
-import { FormationStep, GeneralInfoStep, ResponsiblePersonsStep, SummaryStep, UAVSelectionStep, WaypointsStep } from "./MissionWizardSteps";
+import { 
+  FormationStep, 
+  GeneralInfoStep, 
+  ResponsiblePersonsStep, 
+  SummaryStep, 
+  UAVSelectionStep, 
+  WaypointsStep,
+  RouteOptimizationStep
+} from "./MissionWizardSteps";
 import { 
   Step, 
   StepIndicator, 
@@ -61,6 +78,13 @@ const MissionWizard = () => {
         locationLon: 16.0
     });
 
+    const [routeOptimization, setRouteOptimization] = useState<RouteOptimizationData>({
+        avoidTags: [],
+        detectedObstacles: [],
+        removedObstacleIndexes: [],
+        optimalRoute: null
+    });
+
     // Sync UAVs when loaded
     useEffect(() => {
         if (uavs && uavs.length > 0) {
@@ -111,6 +135,14 @@ const MissionWizard = () => {
                 uavPositions: formationPositions
             };
 
+            const finalWaypoints = routeOptimization.optimalRoute 
+                ? routeOptimization.optimalRoute.optimizedRoute.map(point => ({
+                    latitude: point.lat,
+                    longitude: point.lng,
+                    orderIndex: point.order
+                }))
+                : waypointsData.waypoints;
+
             const missionData: CreateMissionDto = {
                 name: generalInfo.name,
                 locationLat: generalInfo.locationLat,
@@ -120,7 +152,7 @@ const MissionWizard = () => {
                 uavIds: uavSelection.selectedUAVIds,
                 responsibleUsers: responsiblePersons.selectedUsernames,
                 initialFormation: formationDto,
-                waypoints: waypointsData.waypoints
+                waypoints: finalWaypoints
             };
 
             await missionService.createMission(missionData);
@@ -146,6 +178,9 @@ const MissionWizard = () => {
             case 4:
                 return waypointsData.waypoints.length >= 2;
             case 5:
+                // Route optimization is optional, always allow proceeding
+                return true;
+            case 6:
                 return true;
             default:
                 return false;
@@ -158,14 +193,18 @@ const MissionWizard = () => {
                 return (
                     <GeneralInfoStep
                         data={generalInfo}
-                        onUpdate={(update: SetStateAction<GeneralInfoData>) => setGeneralInfo({ ...generalInfo, ...update })}
+                        onUpdate={(update: SetStateAction<GeneralInfoData>) => 
+                            setGeneralInfo({ ...generalInfo, ...update })
+                        }
                     />
                 );
             case 1:
                 return (
                     <UAVSelectionStep
                         data={uavSelection}
-                        onUpdate={(update: SetStateAction<UAVSelectionData>) => setUAVSelection({ ...uavSelection, ...update })}
+                        onUpdate={(update: SetStateAction<UAVSelectionData>) => 
+                            setUAVSelection({ ...uavSelection, ...update })
+                        }
                     />
                 );
             case 2:
@@ -184,22 +223,34 @@ const MissionWizard = () => {
                 return (
                     <ResponsiblePersonsStep
                         data={responsiblePersons}
-                        onUpdate={(update) => setResponsiblePersons({ ...responsiblePersons, ...update })}
+                        onUpdate={(update) => 
+                            setResponsiblePersons({ ...responsiblePersons, ...update })
+                        }
                     />
                 );
             case 4:
-            return (
-                <WaypointsStep
-                data={{
-                    ...waypointsData,
-                    locationLat: generalInfo.locationLat,
-                    locationLon: generalInfo.locationLon
-                }}
-                missionUAVIds={uavSelection.selectedUAVIds}  // ← ADD THIS
-                onUpdate={(update) => setWaypointsData({ ...waypointsData, ...update })}
-                />
-            );
+                return (
+                    <WaypointsStep
+                        data={{
+                            ...waypointsData,
+                            locationLat: generalInfo.locationLat,
+                            locationLon: generalInfo.locationLon
+                        }}
+                        missionUAVIds={uavSelection.selectedUAVIds}
+                        onUpdate={(update) => setWaypointsData({ ...waypointsData, ...update })}
+                    />
+                );
             case 5:
+                return (
+                    <RouteOptimizationStep
+                        data={routeOptimization}
+                        waypoints={waypointsData.waypoints}
+                        onUpdate={(update) => 
+                            setRouteOptimization({ ...routeOptimization, ...update })
+                        }
+                    />
+                );
+            case 6:
                 const summaryData: SummaryData = {
                     ...generalInfo,
                     ...uavSelection,

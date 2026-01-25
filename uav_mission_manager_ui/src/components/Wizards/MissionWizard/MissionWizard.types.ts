@@ -1,6 +1,7 @@
 import type { UAV } from '../../../types/uav.types';
 import type { User } from '../../../types/user.types';
 import type { CreateWaypointDto } from '../../../types/waypoint.types';
+import type { RouteOptimizationData } from '../../../types/pathPlanning.types';
 
 export interface GeneralInfoData {
   name: string;
@@ -38,7 +39,12 @@ export interface WaypointsData {
   locationLon: number;
 }
 
-export interface SummaryData extends GeneralInfoData, UAVSelectionData, FormationData, ResponsiblePersonsData, WaypointsData {}
+export interface SummaryData extends 
+  GeneralInfoData, 
+  UAVSelectionData, 
+  FormationData, 
+  ResponsiblePersonsData, 
+  WaypointsData {}
 
 export interface StepProps<T = any> {
   data: T;
@@ -57,5 +63,9 @@ export const STEPS = [
   'Formation',
   'Responsible Persons',
   'Waypoints',
+  'Route Optimization',
   'Summary'
 ];
+
+// Re-export RouteOptimizationData for convenience
+export type { RouteOptimizationData };
