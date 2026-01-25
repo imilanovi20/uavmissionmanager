@@ -6,7 +6,8 @@ export const ENDPOINTS = {
   USERS: '/user',
   UAVS: '/uav',
   EQUIPMENT: '/equipment',
-  MISSIONS: '/mission'
+  MISSIONS: '/mission',
+  PATH: '/path'
 } as const;
 
 export const STORAGE_KEYS = {
