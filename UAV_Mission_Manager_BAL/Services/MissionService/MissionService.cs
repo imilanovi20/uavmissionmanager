@@ -13,6 +13,7 @@ using UAV_Mission_Manager_DAL.Entities;
 using UAV_Mission_Manager_DTO.Models.AdditionalEquipment;
 using UAV_Mission_Manager_DTO.Models.Formation;
 using UAV_Mission_Manager_DTO.Models.Mission;
+using UAV_Mission_Manager_DTO.Models.PathPlanning;
 using UAV_Mission_Manager_DTO.Models.Task;
 using UAV_Mission_Manager_DTO.Models.UAV;
 using UAV_Mission_Manager_DTO.Models.UAVPostion;
@@ -298,10 +299,21 @@ namespace UAV_Mission_Manager_BAL.Services.MissionService
                     };
                 }
 
+                var points = mission.Waypoints
+                    .Select(w => new PointDto
+                    {
+                        Order = w.OrderIndex,
+                        Lat = w.Latitude,
+                        Lng = w.Longitude
+                    })
+                    .ToList();
+
                 var newWeatherData = await _weatherService.GetWeatherForecastAsync(
-                    mission.Date,
-                    mission.LocationLat,
-                    mission.LocationLon
+                    new GetWeatherDataDto
+                    {
+                        Date = mission.Date,
+                        Points = points
+                    }
                 );
 
                 if (mission.WeatherData != null)
