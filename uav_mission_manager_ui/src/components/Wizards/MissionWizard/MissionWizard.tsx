@@ -188,16 +188,17 @@ const MissionWizard = () => {
                     />
                 );
             case 4:
-                return (
-                    <WaypointsStep
-                        data={{ 
-                            ...waypointsData, 
-                            locationLat: generalInfo.locationLat,
-                            locationLon: generalInfo.locationLon
-                        }}
-                        onUpdate={(update: SetStateAction<WaypointsData>) => setWaypointsData({ ...waypointsData, ...update })}
-                    />
-                );
+            return (
+                <WaypointsStep
+                data={{
+                    ...waypointsData,
+                    locationLat: generalInfo.locationLat,
+                    locationLon: generalInfo.locationLon
+                }}
+                missionUAVIds={uavSelection.selectedUAVIds}  // ← ADD THIS
+                onUpdate={(update) => setWaypointsData({ ...waypointsData, ...update })}
+                />
+            );
             case 5:
                 const summaryData: SummaryData = {
                     ...generalInfo,
