@@ -2,6 +2,12 @@ import type { UAV } from '../../../types/uav.types';
 import type { User } from '../../../types/user.types';
 import type { CreateWaypointDto } from '../../../types/waypoint.types';
 import type { RouteOptimizationData } from '../../../types/pathPlanning.types';
+import type { WeatherData } from '../../../types/weather.types';
+import type { 
+  OperationCategoryResponse, 
+  RecordingPermissionDto, 
+  AirspaceCheckResult 
+} from '../../../types/permit.types';
 
 export interface GeneralInfoData {
   name: string;
@@ -39,6 +45,17 @@ export interface WaypointsData {
   locationLon: number;
 }
 
+export interface WeatherPermitsData {
+  weather: WeatherData | null;
+  operationCategory: OperationCategoryResponse | null;
+  recordingPermission: RecordingPermissionDto | null;
+  airspaceCheck: AirspaceCheckResult | null;
+  isWeatherLoading: boolean;
+  isPermitsLoading: boolean;
+  weatherError: string | null;
+  permitsError: string | null;
+}
+
 export interface SummaryData extends 
   GeneralInfoData, 
   UAVSelectionData, 
@@ -64,6 +81,7 @@ export const STEPS = [
   'Responsible Persons',
   'Waypoints',
   'Route Optimization',
+  'Weather & Permits',
   'Summary'
 ];
 
