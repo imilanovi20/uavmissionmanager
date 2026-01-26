@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using UAV_Mission_Manager_BAL.Services.FormationService;
+using UAV_Mission_Manager_BAL.Services.ObstacleService;
 using UAV_Mission_Manager_BAL.Services.TaskService;
 using UAV_Mission_Manager_BAL.Services.WaypointService;
 using UAV_Mission_Manager_BAL.Services.WeatherService;
@@ -30,10 +32,10 @@ namespace UAV_Mission_Manager_BAL.Services.MissionService
         private readonly IRepository<User> _userRepository;
         private readonly IRepository<MissionUAV> _missionUAVRepository;
         private readonly IRepository<MissionUser> _missionUserRepository;
-        private readonly IWeatherService _weatherService;
         private readonly IWaypointService _waypointService;
         private readonly ITaskService _taskService;
         private readonly IFormationService _formationService;
+        private readonly IObstacleService _obstacleService;
         private readonly ApplicationDbContext _context;
 
         public MissionService(
@@ -42,10 +44,10 @@ namespace UAV_Mission_Manager_BAL.Services.MissionService
             IRepository<User> userRepository,
             IRepository<MissionUAV> missionUAVRepository,
             IRepository<MissionUser> missionUserRepository,
-            IWeatherService weatherService,
             IWaypointService waypointService,
             ITaskService taskService,
             IFormationService formationService,
+            IObstacleService obstacleService,
             ApplicationDbContext context)
         {
             _missionRepository = missionRepository;
@@ -53,10 +55,10 @@ namespace UAV_Mission_Manager_BAL.Services.MissionService
             _userRepository = userRepository;
             _missionUAVRepository = missionUAVRepository;
             _missionUserRepository = missionUserRepository;
-            _weatherService = weatherService;
             _waypointService = waypointService;
             _taskService = taskService;
             _formationService = formationService;
+            _obstacleService = obstacleService;
             _context = context;
         }
 
@@ -101,6 +103,16 @@ namespace UAV_Mission_Manager_BAL.Services.MissionService
                     }
                 }
 
+                if (createMissionDto.Obstacles != null && createMissionDto.Obstacles.Any())
+                {
+                    var createObstaclesDto = new CreateObstaclesDto
+                    {
+                        MissionId = mission.Id,
+                        Obstacles = createMissionDto.Obstacles
+                    };
+                    await _obstacleService.CreateObstaclesForAsync(createObstaclesDto);
+                }
+
                 await transaction.CommitAsync();
 
                 var missionDto = await GetMissionByIdAsync(mission.Id);
@@ -141,11 +153,32 @@ namespace UAV_Mission_Manager_BAL.Services.MissionService
                 Date = createMissionDto.Date,
                 Description = createMissionDto.Description,
                 CreatedAt = DateTime.UtcNow,
+                CreatedByUsername = createMissionDto.CreatedByUsername,
+
                 Temperature = createMissionDto.WeatherData.Temperature,
                 WindSpeed = createMissionDto.WeatherData.WindSpeed,
                 WindDirection = createMissionDto.WeatherData.WindDirection,
                 IsSafeForFlight = createMissionDto.WeatherData.IsSafeForFlight,
-                WeatherCode = createMissionDto.WeatherData.WeatherCode
+                WeatherCode = createMissionDto.WeatherData.WeatherCode,
+
+                OperationCategory = createMissionDto.PermitData?.OperationCategory,
+                HeviestUAV = createMissionDto.PermitData?.HeaviestUAV ?? 0,
+                UAVOperationClass = createMissionDto.PermitData?.UAVOperationClass,
+                ZoneOperationClass = createMissionDto.PermitData?.ZoneOperationClass,
+                IsRecordingPermissionRequired = createMissionDto.PermitData?.IsRecordingPermissionRequired ?? false,
+                CrossesAirspace = createMissionDto.PermitData?.CrossesAirspace ?? false,
+                CrossesAirspaceMessage = createMissionDto.PermitData?.CrossesAirspaceMessage,
+
+                ProjectedFlightTime = createMissionDto.FlightTimeData?.ProjectedFlightTime,
+                FlightTimeUAV = createMissionDto.FlightTimeData != null
+                    ? JsonSerializer.Serialize(createMissionDto.FlightTimeData)
+                    : null,
+                Violations = createMissionDto.PermitData?.Violations != null
+                    ? JsonSerializer.Serialize(createMissionDto.PermitData.Violations)
+                    : null,
+                OptimalRoute = createMissionDto.OptimalRoute != null
+                    ? JsonSerializer.Serialize(createMissionDto.OptimalRoute)
+                    : null
             };
 
             _missionRepository.Add(mission);
@@ -220,6 +253,8 @@ namespace UAV_Mission_Manager_BAL.Services.MissionService
         public async Task<MissionDto> GetMissionByIdAsync(int id)
         {
             var mission = await _missionRepository.GetAll()
+                .Include(m => m.MissionObstacles)
+                    .ThenInclude(mo => mo.Obstacle)
                 .Include(m => m.MissionUAVs)
                     .ThenInclude(mu => mu.UAV)
                         .ThenInclude(u => u.UAV_AdditionalEquipments)
@@ -273,19 +308,66 @@ namespace UAV_Mission_Manager_BAL.Services.MissionService
                 Date = mission.Date,
                 Description = mission.Description,
                 CreatedAt = mission.CreatedAt,
+                CreatedByUsername = mission.CreatedByUsername,
+
+                WeatherData = new WeatherDataDto
+                {
+                    Temperature = mission.Temperature,
+                    WindSpeed = mission.WindSpeed,
+                    WindDirection = mission.WindDirection,
+                    IsSafeForFlight = mission.IsSafeForFlight,
+                    WeatherCode = mission.WeatherCode
+                },
+
+                // Permit data
+                PermitData = new PermitDataDto
+                {
+                    OperationCategory = mission.OperationCategory,
+                    HeaviestUAV = mission.HeviestUAV,
+                    UAVOperationClass = mission.UAVOperationClass,
+                    ZoneOperationClass = mission.ZoneOperationClass,
+                    IsRecordingPermissionRequired = mission.IsRecordingPermissionRequired,
+                    CrossesAirspace = mission.CrossesAirspace,
+                    CrossesAirspaceMessage = mission.CrossesAirspaceMessage,
+                    Violations = !string.IsNullOrEmpty(mission.Violations)
+                        ? JsonSerializer.Deserialize<List<AirspaceViolationDto>>(mission.Violations)
+                        : new List<AirspaceViolationDto>()
+                },
+
+                FlightTimeData = !string.IsNullOrEmpty(mission.FlightTimeUAV)
+                    ? JsonSerializer.Deserialize<FlightTimeDataDto>(mission.FlightTimeUAV)
+                    : null,
+
+
+
+                OptimalRoute = !string.IsNullOrEmpty(mission.OptimalRoute)
+                    ? JsonSerializer.Deserialize<OptimalRouteDto>(mission.OptimalRoute)
+                    : null,
 
                 
-                // UAVs
+                Obstacles = mission.MissionObstacles?
+                    .Select(mo => new ObstacleDto
+                    {
+                        Name = mo.Obstacle.Name,
+                        Type = mo.Obstacle.Type,
+                        Coordinates = mo.Obstacle.Coordinates 
+                            .Select(c => new PointDto
+                            {
+                                Lat = c.Lat,
+                                Lng = c.Lng
+                            })
+                            .ToList()
+                    })
+                    .ToList() ?? new List<ObstacleDto>(),
+
                 UAVs = mission.MissionUAVs?
                     .Select(mu => MapUAVToDto(mu.UAV))
                     .ToList() ?? new List<UAVDto>(),
 
-                // Responsible users
                 ResponsibleUsers = mission.MissionUsers?
                     .Select(mu => MapUserToDto(mu.User))
                     .ToList() ?? new List<UserDto>(),
 
-                // Waypoints sa Tasks
                 Waypoints = mission.Waypoints?
                     .OrderBy(w => w.OrderIndex)
                     .Select(w => MapWaypointToDto(w))
