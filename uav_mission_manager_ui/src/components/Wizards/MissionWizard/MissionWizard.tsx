@@ -10,7 +10,8 @@ import {
   type ResponsiblePersonsData, 
   type SummaryData, 
   type UAVSelectionData, 
-  type WaypointsData 
+  type WaypointsData,
+  type WeatherPermitsData
 } from "./MissionWizard.types";
 import type { RouteOptimizationData } from "../../../types/pathPlanning.types";
 import type { CreateMissionDto } from "../../../types/mission.types";
@@ -23,7 +24,8 @@ import {
   SummaryStep, 
   UAVSelectionStep, 
   WaypointsStep,
-  RouteOptimizationStep
+  RouteOptimizationStep,
+  WeatherPermitsStep
 } from "./MissionWizardSteps";
 import { 
   Step, 
@@ -83,6 +85,17 @@ const MissionWizard = () => {
         detectedObstacles: [],
         removedObstacleIndexes: [],
         optimalRoute: null
+    });
+
+    const [weatherPermits, setWeatherPermits] = useState<WeatherPermitsData>({
+        weather: null,
+        operationCategory: null,
+        recordingPermission: null,
+        airspaceCheck: null,
+        isWeatherLoading: false,
+        isPermitsLoading: false,
+        weatherError: null,
+        permitsError: null
     });
 
     // Sync UAVs when loaded
@@ -167,20 +180,21 @@ const MissionWizard = () => {
 
     const canProceed = () => {
         switch (currentStep) {
-            case 0:
+            case 0: // General Info
                 return generalInfo.name && generalInfo.date && generalInfo.description;
-            case 1:
+            case 1: // UAV Selection
                 return uavSelection.selectedUAVIds.length > 0;
-            case 2:
+            case 2: // Formation
                 return formation.formationType;
-            case 3:
+            case 3: // Responsible Persons
                 return responsiblePersons.selectedUsernames.length > 0;
-            case 4:
+            case 4: // Waypoints
                 return waypointsData.waypoints.length >= 2;
-            case 5:
-                // Route optimization is optional, always allow proceeding
+            case 5: // Route Optimization
                 return true;
-            case 6:
+            case 6: // Weather & Permits
+                return true;
+            case 7: // Summary
                 return true;
             default:
                 return false;
@@ -251,6 +265,31 @@ const MissionWizard = () => {
                     />
                 );
             case 6:
+                // Get route points (optimized or original waypoints)
+                const routePoints = routeOptimization.optimalRoute
+                    ? routeOptimization.optimalRoute.optimizedRoute
+                    : waypointsData.waypoints.map((wp, index) => ({
+                        order: index,
+                        lat: wp.latitude,
+                        lng: wp.longitude
+                    }));
+
+                // Collect all tasks from all waypoints
+                const allTasks = waypointsData.waypoints.flatMap(wp => wp.tasks);
+
+                return (
+                    <WeatherPermitsStep
+                        data={weatherPermits}
+                        onUpdate={(update) => 
+                            setWeatherPermits({ ...weatherPermits, ...update })
+                        }
+                        missionDate={generalInfo.date}
+                        routePoints={routePoints}
+                        uavIds={uavSelection.selectedUAVIds}
+                        allTasks={allTasks}
+                    />
+                );
+            case 7:
                 const summaryData: SummaryData = {
                     ...generalInfo,
                     ...uavSelection,
