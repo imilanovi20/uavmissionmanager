@@ -8,12 +8,10 @@ namespace UAV_Mission_Manager_DTO.Models.WeatherData
 {
     public class WeatherDataDto
     {
-        public int Id { get; set;  }
         public double Temperature { get; set; }
         public double WindSpeed { get; set; }
         public string WindDirection { get; set; }
         public bool IsSafeForFlight { get; set; }
-        public DateTime FetchedAt { get; set; }
         public int WeatherCode { get; set; }
     }
 }
