@@ -15,6 +15,5 @@ namespace UAV_Mission_Manager_BAL.Services.MissionService
         Task<MissionDto> GetMissionByIdAsync(int id);
         Task<IEnumerable<MissionDto>> GetAllMissionsAsync();
         Task<IEnumerable<MissionDto>> GetUserMissionsAsync(String username);
-        Task<UpdateWeatherDto> UpdateWeatherForMissionAsync(int missionId);
     }
 }

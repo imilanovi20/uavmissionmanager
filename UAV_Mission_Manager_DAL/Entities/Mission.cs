@@ -11,18 +11,38 @@ namespace UAV_Mission_Manager_DAL.Entities
     public class Mission
     {
         public int Id { get; set; }
-        public double LocationLat { get; set; }
-        public double LocationLon { get; set; }
         public string Name { get; set; }
         public DateTime Date { get; set; }
         public string Description { get; set; }
         public DateTime CreatedAt { get; set; }
-        //public string CreatedBy { get; set; }
+
+        //Weather Data Properties
+        public double Temperature { get; set; }
+        public double WindSpeed { get; set; }
+        public string WindDirection { get; set; }
+        public bool IsSafeForFlight { get; set; }
+        public int WeatherCode { get; set; }
+        //Flight Category Property
+        public string OperationCategory { get; set; }
+        public double HeviestUAV { get; set; }
+        public string UAVOperationClass { get; set; }
+        public string ZoneOperationClass { get; set; }
+        public bool IsRecordingPermissionRequired { get; set; }
+        public bool CrossesAirspace { get; set; }
+        public string CrossesAirspaceMessage { get; set; }
+        public string? Violations { get; set; }
+        //Battery status properties
+        public string ProjectedFlightTime { get; set; }
+        public string FlightTimeUAV { get; set; }
+        //Obstacle and optimal route properties
+        public string OptimalRoute { get; set; }
+        public string CreatedByUsername { get; set; }
         public ICollection<MissionUAV> MissionUAVs { get; set; } = new List<MissionUAV>();
         public ICollection<MissionUser> MissionUsers { get; set; } = new List<MissionUser>();
         public ICollection<Waypoint> Waypoints { get; set; } = new List<Waypoint>();
         public ICollection<Formation> Formations { get; set; } = new List<Formation>();
-        public WeatherData? WeatherData { get; set; }
+        public ICollection<MissionObstacle> MissionObstacles { get; set; } = new List<MissionObstacle>();
+        public User CreatedBy { get; set; }
     }
 
     public class MissionConfigurationBuilder : IEntityTypeConfiguration<Mission>
@@ -47,11 +67,26 @@ namespace UAV_Mission_Manager_DAL.Entities
             builder.Property(m => m.CreatedAt)
                    .IsRequired();
 
-            builder.HasOne(m => m.WeatherData)
-                   .WithOne(wd => wd.Mission)
-                   .HasForeignKey<WeatherData>(wd => wd.MissionId)
-                   .IsRequired(false)
-                   .OnDelete(DeleteBehavior.Cascade);
+            builder.Property(m => m.Temperature)
+                .HasColumnType("DECIMAL(5,2)");
+
+            builder.Property(m => m.WindSpeed)
+                .HasColumnType("DECIMAL(5,2)");
+
+            builder.Property(m => m.FlightTimeUAV)
+                .HasColumnType("NVARCHAR(MAX)");
+
+            builder.Property(m => m.Violations)
+                .HasColumnType("NVARCHAR(MAX)");
+
+            builder.Property(m => m.OptimalRoute)
+                .HasColumnType("NVARCHAR(MAX)");
+
+            builder.HasOne(m => m.CreatedBy)
+                .WithMany()
+                .HasForeignKey(m => m.CreatedByUsername)
+                .OnDelete(DeleteBehavior.Restrict); 
+
         }
     }
 }

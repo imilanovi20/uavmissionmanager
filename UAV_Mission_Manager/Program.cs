@@ -34,8 +34,6 @@ builder.Services.AddScoped<IRepository<UAV>, Repository<UAV>>();
 builder.Services.AddScoped<IRepository<UAV_AdditionalEquipment>, Repository<UAV_AdditionalEquipment>>();
 builder.Services.AddScoped<IRepository<Mission>, Repository<Mission>>();
 builder.Services.AddScoped<IReadOnlyRepository<Mission>, Repository<Mission>>();
-builder.Services.AddScoped<IRepository<WeatherData>, Repository<WeatherData>>();
-builder.Services.AddScoped<IReadOnlyRepository<WeatherData>, Repository<WeatherData>>();
 builder.Services.AddScoped<IRepository<MissionUAV>, Repository<MissionUAV>>();
 builder.Services.AddScoped<IReadOnlyRepository<MissionUAV>, Repository<MissionUAV>>();
 builder.Services.AddScoped<IRepository<MissionUser>, Repository<MissionUser>>();

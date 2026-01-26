@@ -58,7 +58,6 @@ namespace UAV_Mission_Manager_BAL.Services.WeatherService
                     WindSpeed = Math.Round(windSpeed, 1),
                     WindDirection = windDirection,
                     IsSafeForFlight = isSafe,
-                    FetchedAt = DateTime.UtcNow,
                     WeatherCode = weatherCode
                 };
             }
