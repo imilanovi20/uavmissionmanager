@@ -92,6 +92,7 @@ const MissionWizard = () => {
         operationCategory: null,
         recordingPermission: null,
         airspaceCheck: null,
+        projectedFlightTime: null,
         isWeatherLoading: false,
         isPermitsLoading: false,
         weatherError: null,

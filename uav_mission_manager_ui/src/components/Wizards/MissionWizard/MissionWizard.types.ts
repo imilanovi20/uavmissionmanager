@@ -6,7 +6,8 @@ import type { WeatherData } from '../../../types/weather.types';
 import type { 
   OperationCategoryResponse, 
   RecordingPermissionDto, 
-  AirspaceCheckResult 
+  AirspaceCheckResult,
+  ProjectedFlightTimeResponseDto
 } from '../../../types/permit.types';
 
 export interface GeneralInfoData {
@@ -50,6 +51,7 @@ export interface WeatherPermitsData {
   operationCategory: OperationCategoryResponse | null;
   recordingPermission: RecordingPermissionDto | null;
   airspaceCheck: AirspaceCheckResult | null;
+  projectedFlightTime: ProjectedFlightTimeResponseDto | null;
   isWeatherLoading: boolean;
   isPermitsLoading: boolean;
   weatherError: string | null;

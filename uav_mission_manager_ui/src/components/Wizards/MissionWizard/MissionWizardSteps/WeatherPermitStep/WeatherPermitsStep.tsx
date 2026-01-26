@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { CheckCircle, RefreshCw, Wind, Thermometer, Compass, Shield, Camera, Plane } from 'lucide-react';
+import { CheckCircle, RefreshCw, Wind, Thermometer, Compass, Shield, Camera, Plane, Battery, Clock } from 'lucide-react';
 import type { WeatherPermitsData } from '../../MissionWizard.types';
 import type { PointDto } from '../../../../../types/pathPlanning.types';
 import type { Task } from '../../../../../types/task.types';
@@ -13,6 +13,8 @@ import {
   LoadingText,
   RefreshAllButton,
   CardsGrid,
+  TopRow,
+  BottomRow,
   Card,
   CardHeader,
   CardTitle,
@@ -33,6 +35,11 @@ import {
   WeatherDetail,
   WeatherLabel,
   WeatherValue,
+  BatteryList,
+  BatteryItem,
+  BatteryBar,
+  BatteryFill,
+  BatteryPercentage,
 } from './WeatherPermitsStep.styles';
 
 interface WeatherPermitsStepProps {
@@ -65,8 +72,14 @@ const WeatherPermitsStep: React.FC<WeatherPermitsStepProps> = ({
     setIsRefreshing(true);
     
     try {
-      // Fetch everything in parallel
-      const [weatherResult, operationCategoryResult, recordingPermissionResult, airspaceCheckResult] = await Promise.allSettled([
+      // Fetch everything in parallel (5 calls now)
+      const [
+        weatherResult,
+        operationCategoryResult,
+        recordingPermissionResult,
+        airspaceCheckResult,
+        flightTimeResult
+      ] = await Promise.allSettled([
         weatherService.getWeatherData({
           date: missionDate,
           points: routePoints,
@@ -77,6 +90,10 @@ const WeatherPermitsStep: React.FC<WeatherPermitsStepProps> = ({
         }),
         permitService.checkRecordingPermission(allTasks),
         permitService.checkAirspace(routePoints),
+        permitService.getProjectedFlightTime({
+          uavIds: uavIds,
+          points: routePoints,
+        }),
       ]);
 
       // Process results
@@ -89,45 +106,45 @@ const WeatherPermitsStep: React.FC<WeatherPermitsStepProps> = ({
       if (weatherResult.status === 'fulfilled') {
         newData.weather = weatherResult.value;
         newData.weatherError = null;
-        console.log('Weather loaded:', weatherResult.value);
       } else {
         newData.weather = null;
         newData.weatherError = weatherResult.reason?.message || 'Failed to fetch weather';
-        console.error('Weather error:', weatherResult.reason);
       }
 
       // Operation Category
       if (operationCategoryResult.status === 'fulfilled') {
         newData.operationCategory = operationCategoryResult.value;
-        console.log('Operation category loaded:', operationCategoryResult.value);
       } else {
         newData.operationCategory = null;
-        console.error('Operation category error:', operationCategoryResult.reason);
       }
 
       // Recording Permission
       if (recordingPermissionResult.status === 'fulfilled') {
         newData.recordingPermission = recordingPermissionResult.value;
-        console.log('Recording permission loaded:', recordingPermissionResult.value);
       } else {
         newData.recordingPermission = null;
-        console.error('Recording permission error:', recordingPermissionResult.reason);
       }
 
       // Airspace Check
       if (airspaceCheckResult.status === 'fulfilled') {
         newData.airspaceCheck = airspaceCheckResult.value;
-        console.log('Airspace check loaded:', airspaceCheckResult.value);
       } else {
         newData.airspaceCheck = null;
-        console.error('Airspace check error:', airspaceCheckResult.reason);
+      }
+
+      // Flight Time
+      if (flightTimeResult.status === 'fulfilled') {
+        newData.projectedFlightTime = flightTimeResult.value;
+      } else {
+        newData.projectedFlightTime = null;
       }
 
       // Check if any permit calls failed
       const permitsFailed = 
         operationCategoryResult.status === 'rejected' ||
         recordingPermissionResult.status === 'rejected' ||
-        airspaceCheckResult.status === 'rejected';
+        airspaceCheckResult.status === 'rejected' ||
+        flightTimeResult.status === 'rejected';
 
       if (permitsFailed) {
         newData.permitsError = 'Some permit checks failed. Please try again.';
@@ -166,15 +183,28 @@ const WeatherPermitsStep: React.FC<WeatherPermitsStepProps> = ({
     return iconMap[code] || '01d';
   };
 
-  const hasAnyData = data.weather || data.operationCategory || data.recordingPermission || data.airspaceCheck;
+  const getBatteryColor = (percentage: number): string => {
+    if (percentage >= 80) return '#ef4444';  // Red - Very High Usage (80%+)
+    if (percentage >= 60) return '#f59e0b';  // Orange - High Usage (60-80%)
+    if (percentage >= 40) return '#eab308';  // Yellow - Medium Usage (40-60%)
+    return '#10b981';                        // Green - Low Usage (0-40%)
+  };
+
+  const hasAnyData = 
+    data.weather || 
+    data.operationCategory || 
+    data.recordingPermission || 
+    data.airspaceCheck || 
+    data.projectedFlightTime;
+    
   const hasErrors = data.weatherError || data.permitsError;
 
-  // Show loading overlay during initial load or refresh
+  // Show loading overlay during initial load
   if (isRefreshing && !hasAnyData) {
     return (
       <StepContainer>
         <StepDescription>
-          Reviewing weather conditions and permit requirements for your mission
+          Reviewing weather conditions, permit requirements, and battery usage for your mission
         </StepDescription>
         <LoadingOverlay>
           <LoadingSpinner className="spin" />
@@ -187,7 +217,7 @@ const WeatherPermitsStep: React.FC<WeatherPermitsStepProps> = ({
   return (
     <StepContainer>
       <StepDescription>
-        Reviewing weather conditions and permit requirements for your mission
+        Reviewing weather conditions, permit requirements, and battery usage for your mission
       </StepDescription>
 
       {/* Refresh All Button */}
@@ -199,157 +229,217 @@ const WeatherPermitsStep: React.FC<WeatherPermitsStepProps> = ({
       )}
 
       <CardsGrid>
-        {/* Weather Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Weather Conditions</CardTitle>
-          </CardHeader>
-          
-          {data.weather ? (
-            <>
-              <WeatherIcon
-                src={`https://openweathermap.org/img/wn/${getWeatherIcon(data.weather.weatherCode)}@2x.png`}
-                alt="Weather icon"
-              />
-              <WeatherDetails>
-                <WeatherDetail>
-                  <Thermometer size={16} />
-                  <div>
-                    <WeatherLabel>Temperature</WeatherLabel>
-                    <WeatherValue>{data.weather.temperature}°C</WeatherValue>
-                  </div>
-                </WeatherDetail>
-                <WeatherDetail>
-                  <Wind size={16} />
-                  <div>
-                    <WeatherLabel>Wind Speed</WeatherLabel>
-                    <WeatherValue>{data.weather.windSpeed} km/h</WeatherValue>
-                  </div>
-                </WeatherDetail>
-                <WeatherDetail>
-                  <Compass size={16} />
-                  <div>
-                    <WeatherLabel>Direction</WeatherLabel>
-                    <WeatherValue>{data.weather.windDirection}</WeatherValue>
-                  </div>
-                </WeatherDetail>
-              </WeatherDetails>
-            </>
-          ) : data.weatherError ? (
-            <NoDataText style={{ color: '#dc2626' }}>{data.weatherError}</NoDataText>
-          ) : (
-            <NoDataText>No data available</NoDataText>
-          )}
-        </Card>
-
-        {/* Operation Category Card */}
-        <Card $hasSuccess={!!data.operationCategory}>
-          <CardHeader>
-            <CardTitle>Operation Category</CardTitle>
-            {data.operationCategory && <SuccessIcon><CheckCircle size={20} /></SuccessIcon>}
-          </CardHeader>
-
-          {data.operationCategory ? (
-            <>
-              <CategoryBadge>
-                <Shield size={24} color="#64748b" />
-                <div>
-                  <CategoryLabel>CATEGORY</CategoryLabel>
-                  <CategoryLetter>{data.operationCategory.operationCategory}</CategoryLetter>
-                </div>
-              </CategoryBadge>
-
-              <InfoSection>
-                <InfoLabel>HEAVIEST UAV</InfoLabel>
-                <InfoValue>{data.operationCategory.heviestUAV.name} ({data.operationCategory.heviestUAV.weight} kg)</InfoValue>
-              </InfoSection>
-
-              <InfoSection>
-                <InfoLabel>UAV CLASS</InfoLabel>
-                <InfoValue>{data.operationCategory.uavClass}</InfoValue>
-              </InfoSection>
-
-              <InfoSection>
-                <InfoLabel>ZONE CLASS</InfoLabel>
-                <InfoValue>{data.operationCategory.zoneClass}</InfoValue>
-              </InfoSection>
-            </>
-          ) : data.permitsError ? (
-            <NoDataText style={{ color: '#dc2626' }}>Failed to load</NoDataText>
-          ) : (
-            <NoDataText>No data available</NoDataText>
-          )}
-        </Card>
-
-        {/* Recording Permission Card */}
-        <Card $hasSuccess={data.recordingPermission && !data.recordingPermission.isRecordingPermissionRequired}>
-          <CardHeader>
-            <CardTitle>Recording Permission</CardTitle>
-            {data.recordingPermission && !data.recordingPermission.isRecordingPermissionRequired && (
-              <SuccessIcon><CheckCircle size={20} /></SuccessIcon>
+        {/* Top Row - 3 cards */}
+        <TopRow>
+          {/* Weather Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Weather Conditions</CardTitle>
+            </CardHeader>
+            
+            {data.weather ? (
+              <>
+                <WeatherIcon
+                  src={`https://openweathermap.org/img/wn/${getWeatherIcon(data.weather.weatherCode)}@2x.png`}
+                  alt="Weather icon"
+                />
+                <WeatherDetails>
+                  <WeatherDetail>
+                    <Thermometer size={16} />
+                    <div>
+                      <WeatherLabel>Temperature</WeatherLabel>
+                      <WeatherValue>{data.weather.temperature}°C</WeatherValue>
+                    </div>
+                  </WeatherDetail>
+                  <WeatherDetail>
+                    <Wind size={16} />
+                    <div>
+                      <WeatherLabel>Wind Speed</WeatherLabel>
+                      <WeatherValue>{data.weather.windSpeed} km/h</WeatherValue>
+                    </div>
+                  </WeatherDetail>
+                  <WeatherDetail>
+                    <Compass size={16} />
+                    <div>
+                      <WeatherLabel>Direction</WeatherLabel>
+                      <WeatherValue>{data.weather.windDirection}</WeatherValue>
+                    </div>
+                  </WeatherDetail>
+                </WeatherDetails>
+              </>
+            ) : data.weatherError ? (
+              <NoDataText style={{ color: '#dc2626' }}>{data.weatherError}</NoDataText>
+            ) : (
+              <NoDataText>No data available</NoDataText>
             )}
-          </CardHeader>
+          </Card>
 
-          {data.recordingPermission ? (
-            <>
-              <StatusBadge $isGreen={!data.recordingPermission.isRecordingPermissionRequired}>
-                <StatusIcon>
-                  <Camera size={20} />
-                </StatusIcon>
-                <div>
-                  <CategoryLabel>STATUS</CategoryLabel>
-                  <StatusText>
-                    {data.recordingPermission.isRecordingPermissionRequired 
-                      ? 'Permission Required' 
-                      : 'No Permission Needed'}
-                  </StatusText>
-                </div>
-              </StatusBadge>
+          {/* Operation Category Card */}
+          <Card $hasSuccess={!!data.operationCategory}>
+            <CardHeader>
+              <CardTitle>Operation Category</CardTitle>
+              {data.operationCategory && <SuccessIcon><CheckCircle size={20} /></SuccessIcon>}
+            </CardHeader>
 
-              {data.recordingPermission.message && (
-                <MessageBox>{data.recordingPermission.message}</MessageBox>
-              )}
-            </>
-          ) : data.permitsError ? (
-            <NoDataText style={{ color: '#dc2626' }}>Failed to load</NoDataText>
-          ) : (
-            <NoDataText>No data available</NoDataText>
-          )}
-        </Card>
+            {data.operationCategory ? (
+              <>
+                <CategoryBadge>
+                  <Shield size={24} color="#64748b" />
+                  <div>
+                    <CategoryLabel>CATEGORY</CategoryLabel>
+                    <CategoryLetter>{data.operationCategory.operationCategory}</CategoryLetter>
+                  </div>
+                </CategoryBadge>
 
-        {/* Airspace Check Card */}
-        <Card $hasSuccess={data.airspaceCheck && !data.airspaceCheck.crossesAirspace}>
-          <CardHeader>
-            <CardTitle>Airspace Check</CardTitle>
-            {data.airspaceCheck && !data.airspaceCheck.crossesAirspace && (
-              <SuccessIcon><CheckCircle size={20} /></SuccessIcon>
+                <InfoSection>
+                  <InfoLabel>HEAVIEST UAV</InfoLabel>
+                  <InfoValue>{data.operationCategory.heviestUAV.name} ({data.operationCategory.heviestUAV.weight} kg)</InfoValue>
+                </InfoSection>
+
+                <InfoSection>
+                  <InfoLabel>UAV CLASS</InfoLabel>
+                  <InfoValue>{data.operationCategory.uavClass}</InfoValue>
+                </InfoSection>
+
+                <InfoSection>
+                  <InfoLabel>ZONE CLASS</InfoLabel>
+                  <InfoValue>{data.operationCategory.zoneClass}</InfoValue>
+                </InfoSection>
+              </>
+            ) : data.permitsError ? (
+              <NoDataText style={{ color: '#dc2626' }}>Failed to load</NoDataText>
+            ) : (
+              <NoDataText>No data available</NoDataText>
             )}
-          </CardHeader>
+          </Card>
 
-          {data.airspaceCheck ? (
-            <>
-              <StatusBadge $isGreen={!data.airspaceCheck.crossesAirspace}>
-                <StatusIcon>
-                  <Plane size={20} />
-                </StatusIcon>
-                <div>
-                  <CategoryLabel>STATUS</CategoryLabel>
-                  <StatusText>
-                    {data.airspaceCheck.crossesAirspace ? 'Airspace Violation' : 'Clear Airspace'}
-                  </StatusText>
-                </div>
-              </StatusBadge>
-
-              {data.airspaceCheck.message && (
-                <MessageBox>{data.airspaceCheck.message}</MessageBox>
+          {/* Recording Permission Card */}
+          <Card $hasSuccess={data.recordingPermission && !data.recordingPermission.isRecordingPermissionRequired}>
+            <CardHeader>
+              <CardTitle>Recording Permission</CardTitle>
+              {data.recordingPermission && !data.recordingPermission.isRecordingPermissionRequired && (
+                <SuccessIcon><CheckCircle size={20} /></SuccessIcon>
               )}
-            </>
-          ) : data.permitsError ? (
-            <NoDataText style={{ color: '#dc2626' }}>Failed to load</NoDataText>
-          ) : (
-            <NoDataText>No data available</NoDataText>
-          )}
-        </Card>
+            </CardHeader>
+
+            {data.recordingPermission ? (
+              <>
+                <StatusBadge $isGreen={!data.recordingPermission.isRecordingPermissionRequired}>
+                  <StatusIcon>
+                    <Camera size={20} />
+                  </StatusIcon>
+                  <div>
+                    <CategoryLabel>STATUS</CategoryLabel>
+                    <StatusText>
+                      {data.recordingPermission.isRecordingPermissionRequired 
+                        ? 'Permission Required' 
+                        : 'No Permission Needed'}
+                    </StatusText>
+                  </div>
+                </StatusBadge>
+
+                {data.recordingPermission.message && (
+                  <MessageBox>{data.recordingPermission.message}</MessageBox>
+                )}
+              </>
+            ) : data.permitsError ? (
+              <NoDataText style={{ color: '#dc2626' }}>Failed to load</NoDataText>
+            ) : (
+              <NoDataText>No data available</NoDataText>
+            )}
+          </Card>
+        </TopRow>
+
+        {/* Bottom Row - 2 cards */}
+        <BottomRow>
+          {/* Airspace Check Card */}
+          <Card $hasSuccess={data.airspaceCheck && !data.airspaceCheck.crossesAirspace}>
+            <CardHeader>
+              <CardTitle>Airspace Check</CardTitle>
+              {data.airspaceCheck && !data.airspaceCheck.crossesAirspace && (
+                <SuccessIcon><CheckCircle size={20} /></SuccessIcon>
+              )}
+            </CardHeader>
+
+            {data.airspaceCheck ? (
+              <>
+                <StatusBadge $isGreen={!data.airspaceCheck.crossesAirspace}>
+                  <StatusIcon>
+                    <Plane size={20} />
+                  </StatusIcon>
+                  <div>
+                    <CategoryLabel>STATUS</CategoryLabel>
+                    <StatusText>
+                      {data.airspaceCheck.crossesAirspace ? 'Airspace Violation' : 'Clear Airspace'}
+                    </StatusText>
+                  </div>
+                </StatusBadge>
+
+                {data.airspaceCheck.message && (
+                  <MessageBox>{data.airspaceCheck.message}</MessageBox>
+                )}
+              </>
+            ) : data.permitsError ? (
+              <NoDataText style={{ color: '#dc2626' }}>Failed to load</NoDataText>
+            ) : (
+              <NoDataText>No data available</NoDataText>
+            )}
+          </Card>
+
+          {/* Projected Flight Time / Battery Card (NEW) */}
+          <Card $hasSuccess={data.projectedFlightTime?.flightTimeUAV.every(uav => uav.isFeasible)}>
+            <CardHeader>
+              <CardTitle>Battery Usage</CardTitle>
+              {data.projectedFlightTime && data.projectedFlightTime.flightTimeUAV.every(uav => uav.isFeasible) && (
+                <SuccessIcon><CheckCircle size={20} /></SuccessIcon>
+              )}
+            </CardHeader>
+
+            {data.projectedFlightTime ? (
+              <>
+                <InfoSection style={{ marginBottom: '16px' }}>
+                  <InfoLabel style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Clock size={16} />
+                    PROJECTED FLIGHT TIME
+                  </InfoLabel>
+                  <InfoValue>{data.projectedFlightTime.projectedFlightTime}</InfoValue>
+                </InfoSection>
+
+                <BatteryList>
+                  {data.projectedFlightTime.flightTimeUAV.map((uav) => (
+                    <BatteryItem key={uav.uavId} $isFeasible={uav.isFeasible}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                        <span style={{ fontSize: '14px', fontWeight: 500 }}>UAV {uav.uavId}</span>
+                        <span style={{ fontSize: '12px', color: '#64748b' }}>{uav.flightTime}</span>
+                      </div>
+                      <BatteryBar>
+                        <BatteryFill 
+                          $percentage={uav.batteryUsage}
+                          $color={getBatteryColor(uav.batteryUsage)}
+                        />
+                      </BatteryBar>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+                        <BatteryPercentage $color={getBatteryColor(uav.batteryUsage)}>
+                          <Battery size={14} />
+                          {uav.batteryUsage.toFixed(1)}%
+                        </BatteryPercentage>
+                        {!uav.isFeasible && (
+                          <span style={{ fontSize: '11px', color: '#ef4444', fontWeight: 500 }}>
+                            ⚠️ Insufficient
+                          </span>
+                        )}
+                      </div>
+                    </BatteryItem>
+                  ))}
+                </BatteryList>
+              </>
+            ) : data.permitsError ? (
+              <NoDataText style={{ color: '#dc2626' }}>Failed to load</NoDataText>
+            ) : (
+              <NoDataText>No data available</NoDataText>
+            )}
+          </Card>
+        </BottomRow>
       </CardsGrid>
     </StepContainer>
   );
