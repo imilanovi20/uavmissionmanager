@@ -1,4 +1,5 @@
 import styled from 'styled-components';
+import { RefreshCw } from 'lucide-react';
 
 export const StepContainer = styled.div`
   display: flex;
@@ -13,6 +14,27 @@ export const StepDescription = styled.p`
   font-size: 14px;
   color: #64748b;
   margin: 0 0 20px 0;
+`;
+
+export const LoadingOverlay = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  gap: 16px;
+`;
+
+export const LoadingSpinner = styled(RefreshCw)`
+  width: 48px;
+  height: 48px;
+  color: #3b82f6;
+`;
+
+export const LoadingText = styled.p`
+  font-size: 16px;
+  color: #64748b;
+  margin: 0;
 `;
 
 export const RefreshAllButton = styled.button`
@@ -42,31 +64,34 @@ export const RefreshAllButton = styled.button`
   }
 `;
 
-export const LoadingOverlay = styled.div`
+export const CardsGrid = styled.div`
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 400px;
-  gap: 16px;
-`;
-
-export const LoadingSpinner = styled(RefreshCw)`
-  width: 48px;
-  height: 48px;
-  color: #3b82f6;
-`;
-
-export const LoadingText = styled.p`
-  font-size: 16px;
-  color: #64748b;
-  margin: 0;
-`;
-
-export const CardsGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
   gap: 24px;
+`;
+
+export const TopRow = styled.div`
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+
+  @media (max-width: 1200px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+export const BottomRow = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
 `;
 
 export const Card = styled.div<{ $hasSuccess?: boolean }>`
@@ -142,27 +167,6 @@ export const InfoValue = styled.div`
   color: #0f172a;
 `;
 
-export const RecalculateButton = styled.button`
-  width: 100%;
-  padding: 12px;
-  background: #f1f5f9;
-  color: #475569;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  transition: background 0.2s;
-
-  &:hover {
-    background: #e2e8f0;
-  }
-`;
-
 export const StatusBadge = styled.div<{ $isGreen?: boolean }>`
   background: ${props => props.$isGreen ? '#f0fdf4' : '#fef3c7'};
   border: 2px solid ${props => props.$isGreen ? '#10b981' : '#f59e0b'};
@@ -190,28 +194,6 @@ export const MessageBox = styled.div`
   font-size: 14px;
   color: #475569;
   line-height: 1.5;
-`;
-
-export const RecheckButton = styled.button`
-  width: 100%;
-  padding: 12px;
-  background: #f1f5f9;
-  color: #475569;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  transition: background 0.2s;
-  margin-top: auto;
-
-  &:hover {
-    background: #e2e8f0;
-  }
 `;
 
 export const NoDataText = styled.div`
@@ -255,5 +237,40 @@ export const WeatherValue = styled.div`
   color: #0f172a;
 `;
 
-// Import RefreshCw for LoadingSpinner
-import { RefreshCw } from 'lucide-react';
+// Battery/Flight Time Styles (NEW)
+export const BatteryList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+`;
+
+export const BatteryItem = styled.div<{ $isFeasible: boolean }>`
+  background: ${props => props.$isFeasible ? '#f9fafb' : '#fef2f2'};
+  border: 1px solid ${props => props.$isFeasible ? '#e2e8f0' : '#fca5a5'};
+  border-radius: 8px;
+  padding: 12px;
+`;
+
+export const BatteryBar = styled.div`
+  width: 100%;
+  height: 8px;
+  background: #e2e8f0;
+  border-radius: 4px;
+  overflow: hidden;
+`;
+
+export const BatteryFill = styled.div<{ $percentage: number; $color: string }>`
+  width: ${props => props.$percentage}%;
+  height: 100%;
+  background: ${props => props.$color};
+  transition: width 0.3s ease;
+`;
+
+export const BatteryPercentage = styled.div<{ $color: string }>`
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: ${props => props.$color};
+`;

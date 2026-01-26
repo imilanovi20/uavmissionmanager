@@ -53,3 +53,20 @@ export interface PermitCheckData {
   isLoading: boolean;
   error: string | null;
 }
+
+export interface GetProjectedFlightTimeDto {
+  uavIds: number[];
+  pointIds: PointDto[];
+}
+
+export interface ProjectedFlightTimeResponseDto {
+  projectedFlightTime: string;
+  flightTimeUAV: FlightTimeDto[];
+}
+
+export interface FlightTimeDto{
+  uavId: number;
+  flightTime: string;
+  isFeasible: boolean;
+  batteryUsage:number;
+}
