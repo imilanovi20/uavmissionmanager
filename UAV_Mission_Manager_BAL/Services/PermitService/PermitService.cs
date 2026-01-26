@@ -180,6 +180,77 @@ namespace UAV_Mission_Manager_BAL.Services.PermitService
                 Message = "Fly zone"
             };
         }
+        public async Task<ProjectedFlightTimeResponseDto> CalculateProjectedFlightTime(GetProjectedFlightTimeDto dto)
+        {
+            var uavs = new List<UAVDto>();
+            foreach (int id in dto.UAVIds)
+            {
+                var uav = await _uavService.GetUAVByIdAsync(id);
+                if (uav != null)
+                    uavs.Add(uav);
+            }
+
+            if (!uavs.Any())
+                throw new Exception("No UAVs found with provided IDs");
+
+            if (dto.Points == null || dto.Points.Count < 2)
+                throw new Exception("At least 2 waypoints required for flight path");
+
+            var sortedWaypoints = dto.Points.OrderBy(w => w.Order).ToList();
+
+            double totalDistanceKm = 0;
+            for (int i = 0; i < sortedWaypoints.Count - 1; i++)
+            {
+                var distanceKm = CalculateDistance(
+                    sortedWaypoints[i].Lat,
+                    sortedWaypoints[i].Lng,
+                    sortedWaypoints[i + 1].Lat,
+                    sortedWaypoints[i + 1].Lng
+                );
+                totalDistanceKm += distanceKm;
+            }
+
+            var slowestSpeedUAV = uavs.OrderBy(u => u.MaxSpeed).First();
+
+            var projectedTimeHours = totalDistanceKm / (slowestSpeedUAV.MaxSpeed * 0.75);
+
+            var projectedTimeMinutes = projectedTimeHours * 60;
+
+            var hoverTimeMinutes = sortedWaypoints.Count * 0.75; 
+            var takeoffLandingMinutes = 5.0;
+
+            var totalProjectedTimeMinutes = projectedTimeMinutes + hoverTimeMinutes + takeoffLandingMinutes;
+
+            var swarmCoordinationBufferMinutes = totalProjectedTimeMinutes * 0.15;
+            var finalProjectedTimeMinutes = totalProjectedTimeMinutes + swarmCoordinationBufferMinutes;
+
+            var flightTimeUav = new List<FlightTimeUAVDto>();
+            foreach (var uav in uavs)
+            {
+                var maxFlightTimeMinutes = ParseFlightTime(uav.FlightTime.ToString());
+
+                var batteryUsagePercent = (finalProjectedTimeMinutes / maxFlightTimeMinutes) * 100;
+
+                if (batteryUsagePercent > 100)
+                    batteryUsagePercent = 100;
+
+                var isFeasible = finalProjectedTimeMinutes <= maxFlightTimeMinutes;
+
+                flightTimeUav.Add(new FlightTimeUAVDto
+                {
+                    UAVId = uav.Id,
+                    FlightTime = FormatTime(maxFlightTimeMinutes),
+                    IsFeasible = isFeasible,
+                    BatteryUsage = Math.Round(batteryUsagePercent, 2)
+                });
+            }
+
+            return new ProjectedFlightTimeResponseDto
+            {
+                ProjectedFlightTime = FormatTime(finalProjectedTimeMinutes),
+                FlightTimeUAV = flightTimeUav
+            };
+        }
 
         private UAVWeightCategory DetermineUAVWeightClass(double weightInGrams)
         {
@@ -500,6 +571,36 @@ namespace UAV_Mission_Manager_BAL.Services.PermitService
 
             var c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
             return R * c;
+        }
+
+        private double ParseFlightTime(string flightTime)
+        {
+            if (string.IsNullOrEmpty(flightTime))
+                throw new Exception("Flight time not specified");
+
+            if (TimeSpan.TryParse(flightTime, out TimeSpan timeSpan))
+            {
+                return timeSpan.TotalMinutes;
+            }
+
+            if (double.TryParse(flightTime, out double minutes))
+            {
+                return minutes;
+            }
+
+            throw new Exception($"Invalid flight time format: {flightTime}. Expected format: 'HH:mm:ss' or 'HH:mm'");
+        }
+
+        private string FormatTime(double totalMinutes)
+        {
+            var hours = (int)(totalMinutes / 60);
+            var minutes = (int)(totalMinutes % 60);
+            var seconds = (int)((totalMinutes % 1) * 60);
+
+            if (hours > 0)
+                return $"{hours:D2}:{minutes:D2}:{seconds:D2}";
+            else
+                return $"00:{minutes:D2}:{seconds:D2}";
         }
     }
 }

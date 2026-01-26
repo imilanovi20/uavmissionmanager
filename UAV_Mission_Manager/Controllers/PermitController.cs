@@ -115,5 +115,41 @@ namespace UAV_Mission_Manager_API.Controllers
                 return StatusCode(500, new { message = ex.Message });
             }
         }
+
+        /// <summary>
+        /// Calculate projected flight time for UAV swarm mission
+        /// </summary>
+        /// <param name="dto">UAV IDs and waypoints for flight time calculation</param>
+        /// <returns>Projected flight time and battery usage for each UAV</returns>
+        /// <response code="200">Returns projected flight time and UAV details</response>
+        /// <response code="400">Invalid request data or no UAVs found</response>
+        /// <response code="401">Unauthorized access</response>
+        /// <response code="500">Internal server error</response>
+        [HttpPost("projectedflighttime")]
+        public async Task<IActionResult> CalculateProjectedFlightTime([FromBody] GetProjectedFlightTimeDto dto)
+        {
+            try
+            {
+                if (dto == null || dto.UAVIds == null || !dto.UAVIds.Any())
+                    return BadRequest("UAV IDs are required.");
+
+                if (dto.Points == null || dto.Points.Count < 2)
+                    return BadRequest("At least 2 waypoints are required.");
+
+                var result = await _permitService.CalculateProjectedFlightTime(dto);
+                return Ok(result);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Unauthorized(new
+                {
+                    message = "Access denied"
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = ex.Message });
+            }
+        }
     }
 }

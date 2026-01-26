@@ -14,5 +14,6 @@ namespace UAV_Mission_Manager_BAL.Services.PermitService
         Task<OperationCategoryResponseDto> CalculateOperationCategory(GetOperationCategoryDto dto);
         Task<RecordingPermisionDto> IsRecordingPermissionRequired(List<TaskDto> dtos);
         Task<AirspaceCheckResultDto> CheckAirspaceViolation(List<PointDto> routePoints);
+        Task<ProjectedFlightTimeResponseDto> CalculateProjectedFlightTime(GetProjectedFlightTimeDto dto);
     }
 }
