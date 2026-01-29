@@ -28,7 +28,11 @@ import {
     TaskParams,
     FormationNavigation,
     FormationInfo,
-    NavigationButton
+    NavigationButton,
+    AvatarCard,
+    Avatar,
+    AvatarPlaceholder,
+
 } from './MissionSummary.styles';
 import type { RouteOptimizationData } from '../../../types/pathPlanning.types';
 import type { UAV } from '../../../types/uav.types';
@@ -208,58 +212,54 @@ const MissionSummary = ({
 
             {/* UAVs */}
             <Section>
-                <SectionTitle>
-                    <Plane size={20} />
-                    UAVs ({selectedUAVs.length})
-                </SectionTitle>
-                <CardsGrid>
-                    {selectedUAVs.map(uav => (
-                        <Card key={uav.id}>
-                            {uav.imagePath && uav.imagePath !== '' && uav.imagePath !== '/' ? (
-                                <CardImage src={uav.imagePath} alt={uav.name} />
-                            ) : (
-                                <CardImagePlaceholder>
-                                    <Plane size={32} />
-                                </CardImagePlaceholder>
-                            )}
-                            <CardContent>
-                                <CardTitle>{uav.name}</CardTitle>
-                                <CardSubtitle>{uav.type}</CardSubtitle>
-                                <CardSubtitle>Max Speed: {uav.maxSpeed} km/h</CardSubtitle>
-                            </CardContent>
-                        </Card>
-                    ))}
-                </CardsGrid>
+            <SectionTitle>
+                <Plane size={20} />
+                UAVs ({selectedUAVs.length})
+            </SectionTitle>
+            <CardsGrid>
+                {selectedUAVs.map(uav => (
+                <AvatarCard key={uav.id}>
+                    {uav.imagePath && uav.imagePath !== '' && uav.imagePath !== '/' ? (
+                    <Avatar src={uav.imagePath} alt={uav.name} />
+                    ) : (
+                    <AvatarPlaceholder>
+                        <Plane size={32} />
+                    </AvatarPlaceholder>
+                    )}
+                    <CardContent>
+                    <CardTitle>{uav.name}</CardTitle>
+                    <CardSubtitle>{uav.type}</CardSubtitle>
+                    <CardSubtitle>Max Speed: {uav.maxSpeed} km/h</CardSubtitle>
+                    </CardContent>
+                </AvatarCard>
+                ))}
+            </CardsGrid>
             </Section>
 
             {/* Responsible Users */}
             <Section>
-                <SectionTitle>
-                    <Users size={20} />
-                    Responsible Persons ({responsibleUsers.length})
-                </SectionTitle>
-                <CardsGrid>
-                    {responsibleUsers.map(user => (
-                        <Card key={user.username}>
-                            {user.imagePath && user.imagePath !== '' && user.imagePath !== '/' ? (
-                                <CardImage
-                                    src={user.imagePath}
-                                    alt={user.username}
-                                    style={{ borderRadius: '50%' }}
-                                />
-                            ) : (
-                                <CardImagePlaceholder style={{ borderRadius: '50%' }}>
-                                    <Users size={32} />
-                                </CardImagePlaceholder>
-                            )}
-                            <CardContent>
-                                <CardTitle>{user.username}</CardTitle>
-                                <CardSubtitle>{user.email}</CardSubtitle>
-                                {user.role && <CardSubtitle>Role: {user.role}</CardSubtitle>}
-                            </CardContent>
-                        </Card>
-                    ))}
-                </CardsGrid>
+            <SectionTitle>
+                <Users size={20} />
+                Responsible Persons ({responsibleUsers.length})
+            </SectionTitle>
+            <CardsGrid>
+                {responsibleUsers.map(user => (
+                <AvatarCard key={user.username}>
+                    {user.imagePath && user.imagePath !== '' && user.imagePath !== '/' ? (
+                    <Avatar src={user.imagePath} alt={user.username} />
+                    ) : (
+                    <AvatarPlaceholder>
+                        <Users size={32} />
+                    </AvatarPlaceholder>
+                    )}
+                    <CardContent>
+                    <CardTitle>{user.username}</CardTitle>
+                    <CardSubtitle>{user.email}</CardSubtitle>
+                    {user.role && <CardSubtitle>Role: {user.role}</CardSubtitle>}
+                    </CardContent>
+                </AvatarCard>
+                ))}
+            </CardsGrid>
             </Section>
 
             {/* Weather & Permits */}

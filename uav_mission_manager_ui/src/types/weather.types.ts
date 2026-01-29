@@ -15,8 +15,7 @@ export interface CreateWeatherDataDto {
     windSpeed: number;
     windDirection: string;
     isSafeForFlight: boolean;
-    fetchedAt: string;
-    iconCode: number;
+    weatherCode: number;
 }
 
 export interface GetWeatherDataDto {

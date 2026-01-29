@@ -5,12 +5,12 @@ export const SummaryContainer = styled.div`
   flex-direction: column;
   gap: 1.5rem;
   width: 100%;
-  padding: 0;  /* ← Bez paddinga! */
+  padding: 0;
 `;
 
 export const Section = styled.section`
   background: white;
-  border-radius: 0;  /* ← Bez border radius za full width */
+  border-radius: 0;
   border: none;
   border-top: 1px solid #e5e7eb;
   border-bottom: 1px solid #e5e7eb;
@@ -22,7 +22,7 @@ export const SectionTitle = styled.h3`
   font-weight: 600;
   color: #2c2c2c;
   margin: 0;
-  padding: 1.25rem 2rem;  /* Padding samo unutar sekcije */
+  padding: 1.25rem 2rem;
   border-bottom: 1px solid #e5e7eb;
   background: #fafafa;
   display: flex;
@@ -39,7 +39,7 @@ export const MapContainer = styled.div`
 
 export const CardsGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(4, 1fr);  /* 4 kartice! */
+  grid-template-columns: repeat(4, 1fr);
   gap: 1.5rem;
   padding: 2rem;
 
@@ -60,11 +60,12 @@ export const Card = styled.div`
   padding: 1rem;
   border: 2px solid #e5e7eb;
   border-radius: 8px;
-  transition: all 0.2s ease;
   background: white;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  transition: all 0.2s ease;
+  cursor: default;
 
   &:hover {
     border-color: #2c2c2c;
@@ -91,6 +92,34 @@ export const CardImagePlaceholder = styled.div`
   align-items: center;
   justify-content: center;
   color: #9ca3af;
+`;
+
+// ✨ POSEBAN STIL ZA USER I UAV KARTICE SA CIRCULAR AVATAR ✨
+export const AvatarCard = styled(Card)`
+  align-items: center;
+  text-align: center;
+`;
+
+export const Avatar = styled.img`
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 50%;
+  background: #f3f4f6;
+  border: 3px solid #e5e7eb;
+`;
+
+export const AvatarPlaceholder = styled.div`
+  width: 80px;
+  height: 80px;
+  background: #e5e7eb;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #9ca3af;
+  font-size: 2rem;
+  border: 3px solid #d1d5db;
 `;
 
 export const CardContent = styled.div`
