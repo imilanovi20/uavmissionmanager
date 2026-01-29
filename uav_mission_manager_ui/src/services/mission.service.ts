@@ -23,6 +23,15 @@ class MissionService {
         }
     }
 
+    async getMissionById(missionId: number): Promise<Mission> {
+        try {
+            const response = await api.get<Mission>(ENDPOINTS.MISSIONS+`/${missionId}`);
+            return response.data;
+        } catch (error) {
+            throw error;
+        }
+    }
+
     async createMission(missionData: CreateMissionDto): Promise<CreateMissionResponseDto> {
         try {
             const response = await api.post<CreateMissionResponseDto>(ENDPOINTS.MISSIONS, missionData);
