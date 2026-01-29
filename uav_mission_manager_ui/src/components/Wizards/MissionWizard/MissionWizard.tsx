@@ -9,13 +9,12 @@ import {
   type FormationData, 
   type GeneralInfoData, 
   type ResponsiblePersonsData, 
-  type SummaryData, 
   type UAVSelectionData, 
   type WaypointsData,
   type WeatherPermitsData
 } from "./MissionWizard.types";
-import type { RouteOptimizationData } from "../../../types/pathPlanning.types";
-import type { CreateMissionDto } from "../../../types/mission.types";
+import type { ObstacleDto,  RouteOptimizationData } from "../../../types/pathPlanning.types";
+import type { AirspaceViolationDto, CreateMissionDto, FlightTimeDataDto, OptimalRouteDto, PermitDataDto } from "../../../types/mission.types";
 import { missionService } from "../../../services/mission.service";
 import type { CreateFormationDto } from "../../../types/formation.types";
 import { 
@@ -43,9 +42,12 @@ import {
   WizardPageContainer,
   QuitButton
 } from "./MissionWizard.styles";
+import { useCurrentUser } from "../../../hooks/useCurrentUser";
+import type {  CreateWeatherDataDto } from "../../../types/weather.types";
 
 const MissionWizard = () => {
     const navigate = useNavigate();
+    const { user } = useCurrentUser();
     const [currentStep, setCurrentStep] = useState(0);
     const [loading, setLoading] = useState(false);
 
@@ -133,8 +135,40 @@ const MissionWizard = () => {
     const handleSubmit = async () => {
         try {
             setLoading(true);
+            const weatherData: CreateWeatherDataDto = {
+                temperature: weatherPermits.weather?.temperature || 0,
+                windSpeed: weatherPermits.weather?.windSpeed || 0,
+                windDirection: weatherPermits.weather?.windDirection || "Undefined",
+                isSafeForFlight: weatherPermits.weather?.isSafeForFlight || false,
+                weatherCode: weatherPermits.weather?.iconCode || 0,
+            };
 
-            // Use positions from formation state if available
+            const permitData : PermitDataDto = {
+                operationCategory: weatherPermits.operationCategory?.operationCategory || "Undefined",
+                heaviestUAV: weatherPermits.operationCategory?.heviestUAV.weight || 0,
+                uavOperationClass: weatherPermits.operationCategory?.uavClass || 'Undefined',
+                zoneOperationClass: weatherPermits.operationCategory?.zoneClass || 'Undefined',
+                isRecordingPermissionRequired: weatherPermits.operationCategory?.success || false,
+                crossesAirspace: weatherPermits.airspaceCheck?.crossesAirspace || false,
+                crossesAirspaceMessage: weatherPermits.airspaceCheck?.message || '',
+                violations: weatherPermits.airspaceCheck?.violations as AirspaceViolationDto[] || []
+            }
+
+            const flightTimeData : FlightTimeDataDto = {
+                projectedFlightTime: weatherPermits.projectedFlightTime?.projectedFlightTime || '',
+                uavFlightTimes: weatherPermits.projectedFlightTime?.flightTimeUAV || []
+            }
+
+            const optimalRoute : OptimalRouteDto = {
+                algorithm: routeOptimization.optimalRoute?.algorithm || 'None',
+                totalDistance: routeOptimization.optimalRoute?.totalDistance || 0,
+                totalPoints: routeOptimization.optimalRoute?.totalPoints || 0,
+                optimizationPointsAdded: routeOptimization.optimalRoute?.optimizationPointsAdded || 0,
+                points: routeOptimization.optimalRoute?.optimizedRoute || []
+            }
+
+            const obstacles : ObstacleDto[] = (routeOptimization.detectedObstacles as ObstacleDto[]) || [];
+
             const formationPositions = formation.positions.length > 0 
                 ? formation.positions
                 : uavSelection.selectedUAVIds.map((uavId, index) => ({
@@ -160,15 +194,21 @@ const MissionWizard = () => {
 
             const missionData: CreateMissionDto = {
                 name: generalInfo.name,
-                locationLat: generalInfo.locationLat,
-                locationLon: generalInfo.locationLon,
                 date: generalInfo.date,
                 description: generalInfo.description,
+                createdByUsername: user?.username || 'unknown',
+                weatherData: weatherData,
+                permitData: permitData,
+                flightTimeData: flightTimeData,
+                optimalRoute: optimalRoute,
+                obstacles: obstacles,
                 uavIds: uavSelection.selectedUAVIds,
                 responsibleUsers: responsiblePersons.selectedUsernames,
                 initialFormation: formationDto,
                 waypoints: finalWaypoints
             };
+
+            console.log('Submitting Mission Data:', missionData);
 
             await missionService.createMission(missionData);
             navigate('/missions');

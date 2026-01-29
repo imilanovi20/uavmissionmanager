@@ -1,3 +1,4 @@
+import type { AirspaceViolationDto } from "./mission.types";
 import type { PointDto } from "./pathPlanning.types";
 import type { UAV } from "./uav.types";
 
@@ -29,14 +30,7 @@ export interface RecordingPermissionDto {
   message: string;
 }
 
-export interface AirspaceViolationDto {
-  airportName: string;
-  airportCode: string;
-  distance: number;
-  latitude: number;
-  longitude: number;
-  violationType: string;
-}
+
 
 export interface AirspaceCheckResult {
   success: boolean;

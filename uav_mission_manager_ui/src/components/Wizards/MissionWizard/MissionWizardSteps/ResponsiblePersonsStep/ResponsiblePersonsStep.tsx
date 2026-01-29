@@ -74,7 +74,6 @@ const PreviewContent = styled.div`
   min-width: 0;
 `;
 
-// Extend User type to include username as id for SelectionModal
 interface UserWithUsernameId extends UserType {
   id: string; 
 }
@@ -83,7 +82,6 @@ const ResponsiblePersonsStep = ({ data, onUpdate }: StepProps<ResponsiblePersons
   const [showModal, setShowModal] = useState(false);
 
   const handleConfirmSelection = (selectedIds: (number | string)[]) => {
-    // selectedIds su već usernames jer smo tako mapirali
     const selectedUsernames = selectedIds as string[];
     onUpdate({ selectedUsernames });
   };
@@ -92,7 +90,6 @@ const ResponsiblePersonsStep = ({ data, onUpdate }: StepProps<ResponsiblePersons
     data.selectedUsernames.includes(user.username)
   );
 
-  // Render function za User karticu u modalu
   const renderUserCard = (user: UserWithUsernameId, isSelected: boolean) => (
     <>
       <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 600, color: '#2e2e2e' }}>
@@ -109,13 +106,11 @@ const ResponsiblePersonsStep = ({ data, onUpdate }: StepProps<ResponsiblePersons
     </>
   );
 
-  // Placeholder ikona za User-e bez slike
   const renderPlaceholder = () => <User size={32} />;
 
-  // Mapiraj users da koriste username kao id (za SelectionModal)
   const usersWithUsernameId: UserWithUsernameId[] = data.availableUsers.map(user => ({
     ...user,
-    id: user.username // Username je id za selekciju
+    id: user.username 
   }));
 
   return (
@@ -132,7 +127,6 @@ const ResponsiblePersonsStep = ({ data, onUpdate }: StepProps<ResponsiblePersons
           <SelectedItemsGrid>
             {selectedUsers.map((user) => (
               <SelectedItemCard key={user.username}>
-                {/* Image ili placeholder */}
                 {user.imagePath && user.imagePath !== '' && user.imagePath !== '/' ? (
                   <PreviewImage src={user.imagePath} alt={user.username} />
                 ) : (
@@ -141,7 +135,6 @@ const ResponsiblePersonsStep = ({ data, onUpdate }: StepProps<ResponsiblePersons
                   </PreviewImagePlaceholder>
                 )}
 
-                {/* Content */}
                 <PreviewContent>
                   <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 600 }}>
                     {user.username}

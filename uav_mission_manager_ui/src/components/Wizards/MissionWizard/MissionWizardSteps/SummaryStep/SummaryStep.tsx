@@ -57,7 +57,6 @@ const handleCreateMission = async () => {
     setIsCreating(true);
     setError(null);
 
-    // === FORMATION ===
     const formationPositions = formation.positions.length > 0 
       ? formation.positions
       : uavSelection.selectedUAVIds.map((uavId: number, index: number) => ({
@@ -73,7 +72,6 @@ const handleCreateMission = async () => {
       uavPositions: formationPositions
     };
 
-    // === HELPER: Get Automatic Tasks ===
     const getAutomaticTasks = (waypoints: any[], index: number) => {
       const tasks = [];
       const isFirst = index === 0;
@@ -84,7 +82,6 @@ const handleCreateMission = async () => {
         tasks.push({
           type: 'Takeoff',
           parameters: JSON.stringify({
-            Altitude: 50, // Default altitude
             Latitude: currentWaypoint.latitude,
             Longitude: currentWaypoint.longitude
           })
@@ -98,7 +95,6 @@ const handleCreateMission = async () => {
           parameters: JSON.stringify({
             Latitude: nextWaypoint.latitude,
             Longitude: nextWaypoint.longitude,
-            Altitude: 50
           })
         });
       }
@@ -153,14 +149,12 @@ const handleCreateMission = async () => {
           };
         });
 
-    // === OBSTACLES (only active) ===
     const activeObstacles = routeOptimization?.detectedObstacles
       ? routeOptimization.detectedObstacles.filter((_: any, idx: number) => 
           !(routeOptimization.removedObstacleIndexes || []).includes(idx)
         )
       : undefined;
 
-    // === OPTIMAL ROUTE DTO ===
     const optimalRouteDto = routeOptimization?.optimalRoute ? {
       algorithm: routeOptimization.optimalRoute.algorithm,
       totalDistance: routeOptimization.optimalRoute.totalDistance,
@@ -173,7 +167,6 @@ const handleCreateMission = async () => {
       }))
     } : undefined;
 
-    // === WEATHER DATA ===
     const weatherData = weatherPermits?.weather ? {
       temperature: weatherPermits.weather.temperature,
       windSpeed: weatherPermits.weather.windSpeed,
@@ -182,7 +175,6 @@ const handleCreateMission = async () => {
       iconCode: weatherPermits.weather.iconCode
     } : undefined;
 
-    // === PERMIT DATA DTO ===
     const permitDataDto = (weatherPermits?.operationCategory || 
                           weatherPermits?.recordingPermission || 
                           weatherPermits?.airspaceCheck) ? {
@@ -196,7 +188,6 @@ const handleCreateMission = async () => {
       violations: weatherPermits.airspaceCheck?.violations || []
     } : undefined;
 
-    // === FLIGHT TIME DATA DTO ===
     const flightTimeDataDto = weatherPermits?.projectedFlightTime ? {
       projectedFlightTime: weatherPermits.projectedFlightTime.projectedFlightTime,
       uavFlightTimes: weatherPermits.projectedFlightTime.flightTimeUAV?.map((ft: any) => ({
@@ -207,7 +198,6 @@ const handleCreateMission = async () => {
       })) || []
     } : undefined;
 
-    // === CREATE MISSION DTO ===
     const missionData: CreateMissionDto = {
       name: generalInfo.name,
       date: generalInfo.date,
@@ -267,43 +257,7 @@ const handleCreateMission = async () => {
         weatherPermits={weatherPermits}
       />
 
-      {/* CREATE MISSION BUTTON */}
-      <CreateMissionSection>
-        {!isSuccess ? (
-          <>
-            <CreateMissionButton onClick={handleCreateMission} disabled={isCreating}>
-              {isCreating ? (
-                <>
-                  <Loader size={20} className="spinning" />
-                  Creating Mission...
-                </>
-              ) : (
-                'Create Mission'
-              )}
-            </CreateMissionButton>
 
-            {error && (
-              <div style={{ 
-                marginTop: '1rem', 
-                padding: '1rem', 
-                background: '#fee2e2', 
-                border: '1px solid #fca5a5',
-                borderRadius: '8px',
-                color: '#dc2626',
-                fontSize: '0.875rem',
-                maxWidth: '600px'
-              }}>
-                {error}
-              </div>
-            )}
-          </>
-        ) : (
-          <SuccessMessage>
-            <CheckCircle size={24} />
-            Mission created successfully! Redirecting...
-          </SuccessMessage>
-        )}
-      </CreateMissionSection>
     </SummaryStepContainer>
   );
 };

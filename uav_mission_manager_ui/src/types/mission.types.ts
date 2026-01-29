@@ -3,7 +3,7 @@ import type { ObstacleDto } from "./pathPlanning.types";
 import type { UAV } from "./uav.types";
 import type { User } from "./user.types";
 import type { CreateWaypointDto, Waypoint } from "./waypoint.types";
-import type { WeatherData } from "./weather.types";
+import type { CreateWeatherDataDto, WeatherData } from "./weather.types";
 
 export interface Mission {
     id: number;
@@ -78,7 +78,7 @@ export interface CreateMissionDto {
     description: string;
     createdByUsername: string;
 
-    weatherData?: WeatherData;
+    weatherData?: CreateWeatherDataDto;
     permitData?: PermitDataDto;
     flightTimeData?: FlightTimeDataDto;
 
