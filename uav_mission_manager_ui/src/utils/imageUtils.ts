@@ -14,15 +14,12 @@ export const compressImage = (file: File, maxWidth: number = 800, quality: numbe
     const img = new Image();
 
     img.onload = () => {
-      // Izračunaj nove dimenzije
       const ratio = Math.min(maxWidth / img.width, maxWidth / img.height);
       canvas.width = img.width * ratio;
       canvas.height = img.height * ratio;
 
-      // Nacrtaj kompresiranu sliku
       ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-      // Konvertiraj u base64
       const base64 = canvas.toDataURL('image/jpeg', quality);
       resolve(base64);
     };

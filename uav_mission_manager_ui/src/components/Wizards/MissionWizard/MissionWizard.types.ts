@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { UAV } from '../../../types/uav.types';
 import type { User } from '../../../types/user.types';
 import type { CreateWaypointDto } from '../../../types/waypoint.types';

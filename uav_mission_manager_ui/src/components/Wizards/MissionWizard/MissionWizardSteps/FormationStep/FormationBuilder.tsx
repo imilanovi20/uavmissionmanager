@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Plane, X } from 'lucide-react';
 import {
   FormationContainer,
@@ -46,6 +46,21 @@ const FormationStep = ({ data, selectedUAVs, onUpdate }: FormationStepProps) => 
   const [placedUAVs, setPlacedUAVs] = useState<PlacedUAVPosition[]>([]);
   const [draggedUAVId, setDraggedUAVId] = useState<number | null>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+      const convertedPositions = placedUAVs.map(p => ({
+        uavId: p.uavId,
+        positionX: (p.x - 50) * 2,
+        positionY: (p.y - 50) * 2,
+        positionZ: 0
+      }));
+      
+      if (placedUAVs.length > 0) {
+        onUpdate({ positions: convertedPositions });
+      } else if (placedUAVs.length === 0 && data.positions.length > 0) {
+        onUpdate({ positions: [] });
+      }
+    }, [placedUAVs]);
 
   const isUAVPlaced = (uavId: number) => {
     return placedUAVs.some(p => p.uavId === uavId);

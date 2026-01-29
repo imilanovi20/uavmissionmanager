@@ -1,3 +1,4 @@
+/* eslint-disable no-case-declarations */
 import { useState, useEffect, type SetStateAction } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
@@ -291,14 +292,19 @@ const MissionWizard = () => {
                     />
                 );
             case 7:
-                const summaryData: SummaryData = {
-                    ...generalInfo,
-                    ...uavSelection,
-                    ...formation,
-                    ...responsiblePersons,
-                    ...waypointsData
-                };
-                return <SummaryStep data={summaryData} onUpdate={() => {}} />;
+                return (
+                    <SummaryStep
+                        data={{}}  // Empty data prop to satisfy StepProps
+                        onUpdate={() => {}}  // Empty onUpdate to satisfy StepProps
+                        generalInfo={generalInfo}
+                        uavSelection={uavSelection}
+                        formation={formation}
+                        responsiblePersons={responsiblePersons}
+                        waypointsData={waypointsData}
+                        routeOptimization={routeOptimization}
+                        weatherPermits={weatherPermits}
+                    />
+                );
             default:
                 return null;
         }
