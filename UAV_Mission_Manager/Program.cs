@@ -18,6 +18,7 @@ using UAV_Mission_Manager_BAL.Services.TaskService;
 using UAV_Mission_Manager_BAL.Services.FormationService;
 using UAV_Mission_Manager_BAL.Services.PathPlanningService;
 using UAV_Mission_Manager_BAL.Services.PermitService;
+using UAV_Mission_Manager_BAL.Services.ObstacleService;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -46,6 +47,10 @@ builder.Services.AddScoped<IRepository<Formation>, Repository<Formation>>();
 builder.Services.AddScoped<IReadOnlyRepository<Formation>, Repository<Formation>>();
 builder.Services.AddScoped<IRepository<UAVPosition>, Repository<UAVPosition>>();
 builder.Services.AddScoped<IReadOnlyRepository<UAVPosition>, Repository<UAVPosition>>();
+builder.Services.AddScoped<IRepository<Obstacle>, Repository<Obstacle>>();
+builder.Services.AddScoped<IReadOnlyRepository<Obstacle>, Repository<Obstacle>>();
+builder.Services.AddScoped<IRepository<MissionObstacle>, Repository<MissionObstacle>>();
+builder.Services.AddScoped<IReadOnlyRepository<MissionObstacle>, Repository<MissionObstacle>>();
 
 
 builder.Services.AddScoped<IUserService, UserService>();
@@ -61,6 +66,7 @@ builder.Services.AddScoped<ITaskService, TaskService>();
 builder.Services.AddScoped<IFormationService, FormationService>();
 builder.Services.AddHttpClient<IPathPlanningService, PathPlanningService>();
 builder.Services.AddScoped<IPermitService, PermitService>();
+builder.Services.AddScoped<IObstacleService, ObstacleService>();
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>

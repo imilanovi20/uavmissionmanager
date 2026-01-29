@@ -1,3 +1,4 @@
+/* eslint-disable no-useless-catch */
 import type { CreateMissionDto, CreateMissionResponseDto, Mission } from "../types/mission.types";
 import { ENDPOINTS } from "../utils/constants";
 import { api } from "./api";
