@@ -50,14 +50,14 @@ const LoginPage = (props: LoginPageProps) => {
         <Title>UAV Mission Manager</Title>
         {error && <ErrorMessage role="alert">{error}</ErrorMessage>}
         <InputField
-          label="Korisničko ime"
+          label="Username"
           type="text"
           value={formData.username}
           onChange={handleInputChange('username')}
           disabled={loading}
         />
         <InputField
-          label="Lozinka"
+          label="Password"
           type="password"
           value={formData.password}
           onChange={handleInputChange('password')}
@@ -66,7 +66,7 @@ const LoginPage = (props: LoginPageProps) => {
 
         />
         <BlackButton
-          title={loading ? 'Prijavljivanje...' : 'Prijavi se'}
+          title={loading ? 'Login.' : 'Login'}
           onClick={handleLoginClick}
           disabled={loading}
         />

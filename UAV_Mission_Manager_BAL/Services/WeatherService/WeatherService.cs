@@ -24,7 +24,7 @@ namespace UAV_Mission_Manager_BAL.Services.WeatherService
             try
             {
                 var dateStr = dto.Date.ToString("yyyy-MM-dd");
-                (double latitude, double longitude) = FindCenter(dto.Points);
+                (double latitude, double longitude) = GetCenterPoint(dto.Points);
 
                 var url = $"{OpenMeteoBaseUrl}?" +
                          $"latitude={latitude.ToString(System.Globalization.CultureInfo.InvariantCulture)}&" +
@@ -67,7 +67,7 @@ namespace UAV_Mission_Manager_BAL.Services.WeatherService
             }
         }
 
-        private (double latitude, double longitude) FindCenter(List<PointDto> points)
+        private (double latitude, double longitude) GetCenterPoint(List<PointDto> points)
         {
             if (points == null || points.Count == 0)
             {
