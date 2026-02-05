@@ -92,7 +92,6 @@ namespace UAV_Mission_Manager_BAL.Services.PathPlanningService.OptimalRouteServi
 
             if (gridPath == null || gridPath.Count == 0)
             {
-                Console.WriteLine("   A* nije mogao pronaći put! Vraćam direktnu rutu.");
                 return CreateDirectRoute(start.Lat, start.Lng, end.Lat, end.Lng);
             }
 
@@ -102,7 +101,6 @@ namespace UAV_Mission_Manager_BAL.Services.PathPlanningService.OptimalRouteServi
 
             return smoothedPath;
 
-            throw new NotImplementedException();
         }
 
         private (double minLat, double maxLat, double minLon, double maxLon) CalculateBounds(

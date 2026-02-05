@@ -28,7 +28,6 @@ namespace UAV_Mission_Manager_DTO.Models.Mission
 
         public List<ObstacleDto> Obstacles { get; set; } = new List<ObstacleDto>();
 
-        // Navigation properties (existing)
         public List<UAVDto> UAVs { get; set; } = new List<UAVDto>();
         public List<UserDto> ResponsibleUsers { get; set; } = new List<UserDto>();
         public List<WaypointDto> Waypoints { get; set; } = new List<WaypointDto>();

@@ -82,6 +82,7 @@ const MissionPage = () => {
     try {
       setLoading(true);
       const data = await missionService.getAllMissions();
+      console.log('Fetched missions:', data);
       
       let filteredMissions = data;
       if (!isAdmin || !showAllMissions) {

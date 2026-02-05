@@ -81,6 +81,7 @@ namespace UAV_Mission_Manager_API.Controllers
         /// Create new UAV
         /// </summary>
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> CreateUAV([FromBody] CreateUAVDto uavDto)
         {
             try
