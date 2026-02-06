@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo } from "react";
+/* eslint-disable @typescript-eslint/no-unused-vars */
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plane } from "lucide-react";
 import FilterBar from "../../components/Bars/FilterBar/FilterBar";
@@ -6,9 +7,7 @@ import BlackButton from "../../components/Buttons/BlackButton/BlackButton";
 import { Header, HeaderTop, PageContainer, Subtitle, Title } from "../../components/Containers/CardContainer.styles";
 import WideCard from "../../components/Cards/WideCard/WideCard";
 import { useCurrentUser } from "../../hooks/useCurrentUser";
-import { missionService } from "../../services/mission.service";
-import type { Mission } from "../../types/mission.types";
-import type { MissionStatus } from "../../components/Cards/WideCard/WideCard.types";
+import { useMissions } from "../../hooks/useMissions";
 import styled from "styled-components";
 import SearchBar from "../../components/Search/SearchBar/SearchBar";
 import StatusFilter from "../../components/Search/Filter/StatusFilter";
@@ -66,167 +65,129 @@ const EmptyState = styled.div`
 `;
 
 const MissionPage = () => {
-  const navigate = useNavigate();
-  const { user, isAdmin } = useCurrentUser();
-  const [showAllMissions, setShowAllMissions] = useState(false);
-  const [missions, setMissions] = useState<Mission[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<MissionStatus | 'all'>('all');
+    const navigate = useNavigate();
+    const { user, isAdmin } = useCurrentUser();
+    const [showAllMissions, setShowAllMissions] = useState(false);
 
-  useEffect(() => {
-    fetchMissions();
-  }, [showAllMissions, user]);
+    const {
+        loading,
+        searchQuery,
+        setSearchQuery,
+        statusFilter,
+        setStatusFilter,
+        filteredMissions,
+        deleteMission,
+        getMissionStatus
+    } = useMissions({
+        showAllMissions,
+        currentUsername: user?.username,
+        isAdmin
+    });
 
-  const fetchMissions = async () => {
-    try {
-      setLoading(true);
-      const data = await missionService.getAllMissions();
-      console.log('Fetched missions:', data);
-      
-      let filteredMissions = data;
-      if (!isAdmin || !showAllMissions) {
-        filteredMissions = data.filter(m => m.createdByUsername === user?.username);
-      }
-      
-      setMissions(filteredMissions);
-    } catch (error) {
-      console.error('Failed to fetch missions:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    const handleMissionClick = (missionId: number) => {
+        navigate(`/missions/${missionId}`);
+    };
 
-  const getMissionStatus = (date: string): MissionStatus => {
-    const missionDate = new Date(date);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    const missionDay = new Date(missionDate);
-    missionDay.setHours(0, 0, 0, 0);
-    
-    if (missionDay > today) return 'upcoming';
-    if (missionDay < today) return 'completed';
-    return 'active';
-  };
+    const handleNewMission = () => {
+        navigate('/missions/new');
+    };
 
-  // Filtered and sorted missions
-  const filteredMissions = useMemo(() => {
-    let result = missions;
+    const handleDeleteMission = async (id: number, name: string) => {
+        if (window.confirm(`Are you sure you want to delete mission "${name}"?`)) {
+            try {
+                await deleteMission(id);
+            } catch (error) {
+                alert('Failed to delete mission. Please try again.');
+            }
+        }
+    };
 
-    // Apply search filter
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      result = result.filter(mission =>
-        mission.name.toLowerCase().includes(query) ||
-        mission.description.toLowerCase().includes(query) ||
-        mission.createdByUsername.toLowerCase().includes(query)
-      );
-    }
+    return (
+        <PageContainer>
+            <Header>
+                <HeaderTop>
+                    <div>
+                        <Title>Missions</Title>
+                        <Subtitle>Plan and manage UAV missions</Subtitle>
+                    </div>
+                    <BlackButton
+                        title="+ New Mission"
+                        onClick={handleNewMission}
+                        disabled={false}
+                        width="180px"
+                    />
+                </HeaderTop>
+            </Header>
 
-    // Apply status filter
-    if (statusFilter !== 'all') {
-      result = result.filter(mission => getMissionStatus(mission.date) === statusFilter);
-    }
-
-    // Sort by date (newest execution date first)
-    result.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-    return result;
-  }, [missions, searchQuery, statusFilter]);
-
-  const handleMissionClick = (missionId: number) => {
-    navigate(`/missions/${missionId}`);
-  };
-
-  const handleNewMission = () => {
-    navigate('/missions/new');
-  };
-
-  return (
-    <PageContainer>
-      <Header>
-        <HeaderTop>
-          <div>
-            <Title>Missions</Title>
-            <Subtitle>Plan and manage UAV missions</Subtitle>
-          </div>
-          <BlackButton
-            title="+ New Mission"
-            onClick={handleNewMission}
-            disabled={false}
-            width="180px"
-          />
-        </HeaderTop>
-      </Header>
-
-      <FilterBar
-        showAllMissions={showAllMissions}
-        onFilterChange={setShowAllMissions}
-        isAdmin={isAdmin}
-      />
-
-    <FiltersSection>
-      <SearchSection>
-        <SearchBar
-          value={searchQuery}
-          onChange={setSearchQuery}
-          placeholder="Search missions by name, description, or creator..."
-        />
-      </SearchSection>
-      
-      <FilterRow>
-        <StatusFilter
-          activeFilter={statusFilter}
-          onFilterChange={setStatusFilter}
-        />
-      </FilterRow>
-    </FiltersSection>
-
-      <MissionsList>
-        {loading ? (
-          <EmptyState>
-            <Plane size={48} />
-            <h3>Loading missions...</h3>
-          </EmptyState>
-        ) : filteredMissions.length === 0 ? (
-          <EmptyState>
-            <Plane size={48} />
-            <h3>
-              {searchQuery || statusFilter !== 'all' 
-                ? 'No missions match your filters'
-                : 'No missions found'
-              }
-            </h3>
-            <p>
-              {searchQuery || statusFilter !== 'all'
-                ? 'Try adjusting your search or filters'
-                : showAllMissions 
-                  ? "No missions have been created yet. Click 'New Mission' to create one."
-                  : "You haven't created any missions yet. Click 'New Mission' to get started."
-              }
-            </p>
-          </EmptyState>
-        ) : (
-          filteredMissions.map(mission => (
-            <WideCard
-              key={mission.id}
-              id={mission.id}
-              title={mission.name}
-              date={mission.date}
-              description={mission.description}
-              status={getMissionStatus(mission.date)}
-              uavCount={mission.uavs?.length || 0}
-              teamCount={mission.responsibleUsers?.length || 0}
-              waypointCount={mission.waypoints?.length || 0}
-              createdBy={mission.createdByUsername}
-              onClick={() => handleMissionClick(mission.id)}
+            <FilterBar
+                showAllMissions={showAllMissions}
+                onFilterChange={setShowAllMissions}
+                isAdmin={isAdmin}
             />
-          ))
-        )}
-      </MissionsList>
-    </PageContainer>
-  );
+
+            <FiltersSection>
+                <SearchSection>
+                    <SearchBar
+                        value={searchQuery}
+                        onChange={setSearchQuery}
+                        placeholder="Search missions by name, description, or creator..."
+                    />
+                </SearchSection>
+
+                <FilterRow>
+                    <StatusFilter
+                        activeFilter={statusFilter}
+                        onFilterChange={setStatusFilter}
+                    />
+                </FilterRow>
+            </FiltersSection>
+
+            <MissionsList>
+                {loading ? (
+                    <EmptyState>
+                        <Plane size={48} />
+                        <h3>Loading missions...</h3>
+                    </EmptyState>
+                ) : filteredMissions.length === 0 ? (
+                    <EmptyState>
+                        <Plane size={48} />
+                        <h3>
+                            {searchQuery || statusFilter !== 'all'
+                                ? 'No missions match your filters'
+                                : 'No missions found'
+                            }
+                        </h3>
+                        <p>
+                            {searchQuery || statusFilter !== 'all'
+                                ? 'Try adjusting your search or filters'
+                                : showAllMissions
+                                    ? "No missions have been created yet. Click 'New Mission' to create one."
+                                    : "You haven't created any missions yet. Click 'New Mission' to get started."
+                            }
+                        </p>
+                    </EmptyState>
+                ) : (
+                    filteredMissions.map(mission => (
+                        <WideCard
+                            key={mission.id}
+                            id={mission.id}
+                            title={mission.name}
+                            date={mission.date}
+                            description={mission.description}
+                            status={getMissionStatus(mission.date)}
+                            uavCount={mission.uavs?.length || 0}
+                            teamCount={mission.responsibleUsers?.length || 0}
+                            waypointCount={mission.waypoints?.length || 0}
+                            createdBy={mission.createdByUsername}
+                            onClick={() => handleMissionClick(mission.id)}
+                            showDelete={isAdmin}
+                            onDelete={() => handleDeleteMission(mission.id, mission.name)}
+                        />
+                    ))
+                )}
+            </MissionsList>
+        </PageContainer>
+    );
 };
 
 export default MissionPage;

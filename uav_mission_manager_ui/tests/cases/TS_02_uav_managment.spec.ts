@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { loginAsAdmin } from './helpers/auth';
 
-test.describe('TS 02 UAV Management', () => {
+test.describe.serial('TS 02 UAV Management', () => {
   const screenshotsPath = 'tests/screenshots/TS_02_uav_management/';
 
   test.beforeEach(async ({ page }) => {
@@ -84,8 +84,18 @@ test.describe('TS 02 UAV Management', () => {
         await expect(page).toHaveURL("/uavs/add?");
         await page.screenshot({ path: screenshotsPath + 'TC_02_Add_new_UAV_Missing_required_fields/form_validation_failed.png' });
     });
+  });
 
-    
+    test('TC 03 Delete existing UAV', async ({ page }) => {
+        await test.step('Step description', async () => {
+            await page.getByRole('button', { name: '3' }).click();
+            await expect(page.locator('div').filter({ hasText: 'DJI Mavic 3 ProQuadcopter34' }).nth(3)).toBeVisible();
+            page.once('dialog', dialog => {
+                console.log(`Dialog message: ${dialog.message()}`);
+                dialog.accept(); 
+            });
+            await page.getByRole('button').nth(4).click();
+        });
   });
 
 });
@@ -137,5 +147,12 @@ test('test', async ({ page }) => {
   await page.getByRole('button', { name: 'Choose File' }).setInputFiles('Drone_ATOM_SE_4K.webp');
   await expect(page.locator('form')).toContainText('File selected');
   await expect(page.locator('form')).toContainText('Drone_ATOM_SE_4K.webp');
+    await page.getByRole('button', { name: '3' }).click();
+  await expect(page.locator('div').filter({ hasText: 'DJI Mavic 3 ProQuadcopter34' }).nth(3)).toBeVisible();
+  page.once('dialog', dialog => {
+    console.log(`Dialog message: ${dialog.message()}`);
+    dialog.dismiss().catch(() => {});
+  });
+  await page.getByRole('button').nth(4).click();
 });
 */
