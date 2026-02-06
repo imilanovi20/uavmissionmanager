@@ -296,6 +296,27 @@ namespace UAV_Mission_Manager_BAL.Services.MissionService
             return missions.Select(MapToDto);
         }
 
+        public async Task<bool> DeleteMissionAsync(int id)
+        {
+            try
+            {
+                var mission = await _missionRepository
+                    .GetAll()
+                    .FirstOrDefaultAsync(m => m.Id == id);
+
+                if (mission == null)
+                    return false;
+
+                _missionRepository.Delete(mission);
+                await _missionRepository.SaveAsync();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                return false;
+            }
+        }
+
 
         #region Private Mapping Methods
 
