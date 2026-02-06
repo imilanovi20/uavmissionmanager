@@ -23,6 +23,15 @@ class UAVService {
         }
     }
 
+    async deleteUAV(id: number): Promise<void> {
+        try {
+            await api.delete(`${ENDPOINTS.UAVS}/${id}`);
+        } catch (error) {
+            console.error('Error deleting UAV:', error);
+            throw error;
+        }
+    }
+
 
 }
 

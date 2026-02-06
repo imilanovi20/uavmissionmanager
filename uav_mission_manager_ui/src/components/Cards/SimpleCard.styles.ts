@@ -2,6 +2,7 @@ import styled from "styled-components";
 
 export const CardContainer = styled.div`
   display: flex;
+  position: relative;
   align-items: center;
   gap: 1.5rem;
   padding: 1.5rem;
@@ -55,4 +56,26 @@ export const Description = styled.p`
   margin: 0;
   font-weight: 300;
   margin-top: 0.5rem;
+`;
+
+export const DeleteButton = styled.button`
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  background: rgba(220, 38, 38, 0.9);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 0.5rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  z-index: 10;
+
+  &:hover {
+    background: rgba(185, 28, 28, 1);
+    transform: scale(1.05);
+  }
 `;
