@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable no-useless-catch */
 import type { LoginCredentials, LoginResponse, User } from "../types/user.types";
 import { ENDPOINTS, STORAGE_KEYS } from "../utils/constants";
 import { api } from "./api";
@@ -42,7 +44,16 @@ export class UserService {
         } catch (error) {
             throw error;
         }
-    } 
+    }
+
+    async deleteUser(username: string): Promise<void> {
+        try {
+            await api.delete(`${ENDPOINTS.USERS}/${username}`);
+        } catch (error) {
+            console.error('Error deleting user:', error);
+            throw error;
+        }
+    }
 
   isAuthenticated(): boolean {
     return !!localStorage.getItem(STORAGE_KEYS.TOKEN);

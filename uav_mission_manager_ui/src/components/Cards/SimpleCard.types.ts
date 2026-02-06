@@ -3,5 +3,7 @@ export interface SimpleCardProps {
   altImagePath: string;
   sectionTitle: string;
   subsectionTitle: string;
-  description: string;
+    description: string;
+    onDelete?: () => void; 
+    showDelete?: boolean;
 }
