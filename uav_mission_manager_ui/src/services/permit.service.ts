@@ -21,14 +21,28 @@ class PermitService {
 
     async checkRecordingPermission(
         tasks: Task[]
-        ): Promise<RecordingPermissionDto> {
+    ): Promise<RecordingPermissionDto> {
         try {
+            // Mapiranje Task[] u format koji Backend oèekuje
+            const taskDtos = tasks.map(task => ({
+                id: task.id || 0,
+                type: task.type,
+                order: task.order || 0,
+                uavId: task.uavId || 0,
+                parameters: typeof task.parameters === 'string'
+                    ? task.parameters
+                    : JSON.stringify(task.parameters)
+            }));
+
+            console.log('Sending recording permission request:', taskDtos);
             const response = await api.post<RecordingPermissionDto>(
                 ENDPOINTS.PERMIT + "/recordingpermission",
-                tasks);
+                taskDtos);  // šalji mapirane taskove
+            console.log('Recording permission response:', response.data);
             return response.data;
         } catch (error: any) {
-            console.error('Error adding UAV:', error);
+            console.error('Recording permission error:', error);
+            console.error('Error response:', error.response?.data);
             throw error;
         }
     }

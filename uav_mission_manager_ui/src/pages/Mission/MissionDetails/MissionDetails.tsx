@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Loader } from 'lucide-react';
@@ -89,124 +90,139 @@ const ErrorButton = styled.button`
 `;
 
 const MissionDetailPage = () => {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-  const [mission, setMission] = useState<Mission | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+    const { id } = useParams<{ id: string }>();
+    const navigate = useNavigate();
+    const [mission, setMission] = useState<Mission | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (id) {
-      fetchMission(parseInt(id));
-    }
-  }, [id]);
+    useEffect(() => {
+        if (id) {
+            fetchMission(parseInt(id));
+        }
+    }, [id]);
 
-  const fetchMission = async (missionId: number) => {
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await missionService.getMissionById(missionId);
-      setMission(data);
-    } catch (err: any) {
-      console.error('Failed to fetch mission:', err);
-      setError(err.response?.data?.message || 'Failed to load mission details');
-    } finally {
-      setLoading(false);
-    }
-  };
+    const fetchMission = async (missionId: number) => {
+        try {
+            setLoading(true);
+            setError(null);
+            const data = await missionService.getMissionById(missionId);
 
-  if (loading) {
-    return (
-      <PageContainer>
-        <LoadingContainer>
-          <LoadingSpinner size={48} />
-          <LoadingText>Loading mission...</LoadingText>
-        </LoadingContainer>
-      </PageContainer>
-    );
-  }
+            console.log('=== MISSION DETAIL DATA ===');
+            console.log('Full mission:', data);
+            console.log('Initial Formation:', data.initialFormation);
+            console.log('Formations array:', data.formations);
+            console.log('UAVs:', data.uavs);
+            console.log('Waypoints:', data.waypoints);
+            console.log('========================');
 
-  if (error || !mission) {
-    return (
-      <PageContainer>
-        <ErrorContainer>
-          <ErrorText>{error || 'Mission not found'}</ErrorText>
-          <ErrorButton onClick={() => navigate('/missions')}>
-            Back to Missions
-          </ErrorButton>
-        </ErrorContainer>
-      </PageContainer>
-    );
-  }
+            setMission(data);
+        } catch (err: any) {
+            console.error('Failed to fetch mission:', err);
+            setError(err.response?.data?.message || 'Failed to load mission details');
+        } finally {
+            setLoading(false);
+        }
+    };
 
-  return (
-    <PageContainer>
-      <Header>
-        <HeaderTop>
-          <div>
-            <BackButton onClick={() => navigate('/missions')}>
-              <ArrowLeft size={16} />
-              Back to Missions
-            </BackButton>
-            <Title>{mission.name}</Title>
-            <Subtitle>Mission Details</Subtitle>
-          </div>
-        </HeaderTop>
-      </Header>
+    // Memoiziraj weather permits da se ne kreira uvijek iznova
+    const weatherPermits = mission && (mission.weatherData || mission.permitData || mission.flightTimeData) ? {
+        weather: mission.weatherData || null,
+        operationCategory: mission.permitData ? {
+            operationCategory: mission.permitData.operationCategory,
+            heviestUAV: {
+                name: 'UAV',
+                weight: mission.permitData.heaviestUAV
+            },
+            uavClass: mission.permitData.uavOperationClass,
+            zoneClass: mission.permitData.zoneOperationClass
+        } : null,
+        recordingPermission: mission.permitData ? {
+            isRecordingPermissionRequired: mission.permitData.isRecordingPermissionRequired
+        } : null,
+        airspaceCheck: mission.permitData ? {
+            crossesAirspace: mission.permitData.crossesAirspace,
+            message: mission.permitData.crossesAirspaceMessage,
+            violations: mission.permitData.violations || []
+        } : null,
+        projectedFlightTime: mission.flightTimeData || null,
+        isWeatherLoading: false,
+        isPermitsLoading: false,
+        weatherError: null,
+        permitsError: null
+    } : undefined;
 
-      <MissionSummary
-        name={mission.name}
-        date={mission.date}
-        description={mission.description}
-        selectedUAVs={mission.uavs || []}
-        responsibleUsers={mission.responsibleUsers || []}
-        waypoints={mission.waypoints || []}
-        initialFormationType={mission.initialFormation?.formationType || 'Line'}
-        initialFormationPositions={mission.initialFormation?.uavPositions || []}
-        routeOptimization={{
-          avoidTags: [],
-          detectedObstacles: mission.obstacles || [],
-          removedObstacleIndexes: [],
-          optimalRoute: mission.optimalRoute ? {
+    // Memoiziraj route optimization
+    const routeOptimization = mission ? {
+        avoidTags: [],
+        detectedObstacles: mission.obstacles || [],
+        removedObstacleIndexes: [],
+        optimalRoute: mission.optimalRoute ? {
             algorithm: mission.optimalRoute.algorithm,
             totalDistance: mission.optimalRoute.totalDistance,
             totalPoints: mission.optimalRoute.totalPoints,
             optimizationPointsAdded: mission.optimalRoute.optimizationPointsAdded,
             optimizedRoute: mission.optimalRoute.points?.map(p => ({
-              order: p.order,
-              lat: p.lat,
-              lng: p.lng
+                order: p.order,
+                lat: p.lat,
+                lng: p.lng
             })) || []
-          } : null
-        }}
-        weatherPermits={mission.weatherData || mission.permitData || mission.flightTimeData ? {
-          weather: mission.weatherData || null,
-          operationCategory: mission.permitData ? {
-            operationCategory: mission.permitData.operationCategory,
-            heviestUAV: {
-              name: 'UAV',
-              weight: mission.permitData.heaviestUAV
-            },
-            uavClass: mission.permitData.uavOperationClass,
-            zoneClass: mission.permitData.zoneOperationClass
-          } : null,
-          recordingPermission: mission.permitData ? {
-            isRecordingPermissionRequired: mission.permitData.isRecordingPermissionRequired
-          } : null,
-          airspaceCheck: mission.permitData ? {
-            crossesAirspace: mission.permitData.crossesAirspace,
-            message: mission.permitData.crossesAirspaceMessage,
-            violations: mission.permitData.violations || []
-          } : null,
-          projectedFlightTime: mission.flightTimeData || null,
-          isWeatherLoading: false,
-          isPermitsLoading: false,
-          weatherError: null,
-          permitsError: null
-        } : undefined}
-      />
-    </PageContainer>
-  );
+        } : null
+    } : undefined;
+
+    if (loading) {
+        return (
+            <PageContainer>
+                <LoadingContainer>
+                    <LoadingSpinner size={48} />
+                    <LoadingText>Loading mission...</LoadingText>
+                </LoadingContainer>
+            </PageContainer>
+        );
+    }
+
+    if (error || !mission) {
+        return (
+            <PageContainer>
+                <ErrorContainer>
+                    <ErrorText>{error || 'Mission not found'}</ErrorText>
+                    <ErrorButton onClick={() => navigate('/missions')}>
+                        Back to Missions
+                    </ErrorButton>
+                </ErrorContainer>
+            </PageContainer>
+        );
+    }
+
+    return (
+        <PageContainer>
+            <Header>
+                <HeaderTop>
+                    <div>
+                        <BackButton onClick={() => navigate('/missions')}>
+                            <ArrowLeft size={16} />
+                            Back to Missions
+                        </BackButton>
+                        <Title>{mission.name}</Title>
+                        <Subtitle>Mission Details</Subtitle>
+                    </div>
+                </HeaderTop>
+            </Header>
+
+            <MissionSummary
+                name={mission.name}
+                date={mission.date}
+                description={mission.description}
+                selectedUAVs={mission.uavs || []}
+                responsibleUsers={mission.responsibleUsers || []}
+                waypoints={mission.waypoints || []}
+                initialFormationType={mission.initialFormation?.formationType || 'Line'}
+                initialFormationPositions={mission.initialFormation?.uavPositions || []}
+                routeOptimization={routeOptimization}
+                weatherPermits={weatherPermits}
+            />
+        </PageContainer>
+    );
 };
 
 export default MissionDetailPage;

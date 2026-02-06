@@ -238,6 +238,7 @@ namespace UAV_Mission_Manager_BAL.Services.MissionService
         public async Task<IEnumerable<MissionDto>> GetAllMissionsAsync()
         {
             var missions = await _missionRepository.GetAll()
+                .AsNoTracking()
                 .Include(m => m.MissionUAVs)
                     .ThenInclude(mu => mu.UAV)
                         .ThenInclude(u => u.UAV_AdditionalEquipments)
@@ -253,6 +254,7 @@ namespace UAV_Mission_Manager_BAL.Services.MissionService
         public async Task<MissionDto> GetMissionByIdAsync(int id)
         {
             var mission = await _missionRepository.GetAll()
+                .AsNoTracking()
                 .Include(m => m.MissionObstacles)
                     .ThenInclude(mo => mo.Obstacle)
                 .Include(m => m.MissionUAVs)
@@ -279,6 +281,7 @@ namespace UAV_Mission_Manager_BAL.Services.MissionService
         public async Task<IEnumerable<MissionDto>> GetUserMissionsAsync(string username)
         {
             var missions = await _missionRepository.GetAll()
+                .AsNoTracking()
                 .Include(m => m.MissionUAVs)
                     .ThenInclude(mu => mu.UAV)
                         .ThenInclude(u => u.UAV_AdditionalEquipments)

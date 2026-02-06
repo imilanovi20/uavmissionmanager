@@ -22,13 +22,22 @@ const FormationVisualization = ({
     uavPositions,
     selectedUAVs
 }: FormationVisualizationProps) => {
+    console.log('FormationVisualization received:', { formationType, uavPositions });
 
-    // Convert backend positions (-100 to 100) to display (0-100%)
-    const displayPositions = uavPositions.map(pos => ({
-        uavId: pos.uavId || pos.UAVId,
-        x: (pos.positionX / 2) + 50,
-        y: (pos.positionY / 2) + 50
-    }));
+    // Convert backend positions to display
+    const displayPositions = uavPositions.map(pos => {
+        // Backend može slati relativeX/relativeY ili positionX/positionY
+        const x = pos.positionX ?? pos.relativeX ?? 0;
+        const y = pos.positionY ?? pos.relativeY ?? 0;
+
+        return {
+            uavId: pos.uavId || pos.UAVId,
+            x: (x / 2) + 50,  // Convert -100..100 to 0..100
+            y: (y / 2) + 50
+        };
+    });
+
+    console.log('Display positions:', displayPositions);
 
     const getUAVById = (id: number) => selectedUAVs.find(u => u.id === id);
 
@@ -37,7 +46,6 @@ const FormationVisualization = ({
             <h4 style={{ margin: '0 0 0.75rem 0', fontSize: '0.875rem', fontWeight: 600, color: '#6b7280' }}>
                 Formation: {formationType}
             </h4>
-
             <CoordinateSystem>
                 {/* Grid lines */}
                 <CoordinateGrid>
@@ -54,7 +62,6 @@ const FormationVisualization = ({
                             strokeDasharray={x === 50 ? "none" : "5,5"}
                         />
                     ))}
-
                     {/* Horizontal lines */}
                     {[0, 25, 50, 75, 100].map(y => (
                         <line
@@ -69,12 +76,13 @@ const FormationVisualization = ({
                         />
                     ))}
                 </CoordinateGrid>
-
                 {/* UAVs */}
                 {displayPositions.map((pos, index) => {
                     const uav = getUAVById(pos.uavId);
-                    if (!uav) return null;
-
+                    if (!uav) {
+                        console.warn(`UAV with ID ${pos.uavId} not found`);
+                        return null;
+                    }
                     return (
                         <PlacedUAV key={index} $x={pos.x} $y={pos.y}>
                             {uav.imagePath && uav.imagePath !== '' && uav.imagePath !== '/' ? (
@@ -88,7 +96,6 @@ const FormationVisualization = ({
                         </PlacedUAV>
                     );
                 })}
-
                 {/* Center marker */}
                 <div style={{
                     position: 'absolute',
@@ -103,7 +110,6 @@ const FormationVisualization = ({
                     boxShadow: '0 0 0 1px #2c2c2c'
                 }} />
             </CoordinateSystem>
-
             <div style={{
                 marginTop: '0.75rem',
                 fontSize: '0.75rem',

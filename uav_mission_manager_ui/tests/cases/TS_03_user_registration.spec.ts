@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { loginAsAdmin } from './helpers/auth';
 
-test.describe('TS 03 User Registration', () => {
+test.describe.serial('TS 03 User Registration', () => {
   const screenshotsPath = 'tests/screenshots/TS_03_user_registration/';
 
   test.beforeEach(async ({ page }) => {
@@ -12,34 +12,43 @@ test.describe('TS 03 User Registration', () => {
   });
 
     test('TC 01 Valid user registration', async ({ page }) => {
-        await page.getByRole('button', { name: '+ Add User' }).click();
-        await expect(page).toHaveURL("/users/add");
-        await expect(page.getByText('Add New UserUsername *First')).toBeVisible();
+        await test.step('Step description', async () => {
+            await page.getByRole('button', { name: '+ Add User' }).click();
+            await expect(page).toHaveURL("/users/add");
+            await expect(page.getByText('Add New UserUsername *First')).toBeVisible();
+        });
 
-        const randomUsername = 'user' + Math.random().toString(36).substring(2, 9);
-        await page.getByRole('textbox', { name: 'Username *' }).click();
-        await page.getByRole('textbox', { name: 'Username *' }).fill(randomUsername);
-        await page.getByRole('textbox', { name: 'First Name *' }).click();
-        await page.getByRole('textbox', { name: 'First Name *' }).fill("FirstName" + randomUsername);
-        await page.getByRole('textbox', { name: 'First Name *' }).press('Tab');
-        await page.getByRole('textbox', { name: 'Last Name *' }).click();
-        await page.getByRole('textbox', { name: 'Last Name *' }).fill('LastName' + randomUsername);
-        await page.getByRole('textbox', { name: 'Email *' }).click();
-        await page.getByRole('textbox', { name: 'Email *' }).fill('aa@student.foi.hr');
+        await test.step('Step description', async () => {
+            await page.getByRole('textbox', { name: 'Username *' }).click();
+            await page.getByRole('textbox', { name: 'Username *' }).fill("imilanovi20");
+            await page.getByRole('textbox', { name: 'First Name *' }).click();
+            await page.getByRole('textbox', { name: 'First Name *' }).fill("Ivan");
+            await page.getByRole('textbox', { name: 'First Name *' }).press('Tab');
+            await page.getByRole('textbox', { name: 'Last Name *' }).click();
+            await page.getByRole('textbox', { name: 'Last Name *' }).fill('Milanović-Litre');
+            await page.getByRole('textbox', { name: 'Email *' }).click();
+            await page.getByRole('textbox', { name: 'Email *' }).fill('imilanovi20@student.foi.hr');
+        });
 
-        await page.getByRole('button', { name: '▼' }).click();
-        await page.getByText('User', { exact: true }).click();
+        await test.step('Step description', async () => {
+            await page.getByRole('button', { name: '▼' }).click();
+            await page.getByText('User', { exact: true }).click();
+        });
 
-        await page.getByText('📷Choose picture or drag').click();
-        await page.locator('input[type="file"]').setInputFiles('./tests/testData/pictures/osoba.jpg');
-        await expect(page.locator('form')).toContainText('File selected');
-        await expect(page.locator('form')).toContainText('osoba.jpg');
-        await page.getByRole('button', { name: 'Add User' }).click();
+        await test.step('Step description', async () => {
+            await page.getByText('📷Choose picture or drag').click();
+            await page.locator('input[type="file"]').setInputFiles('./tests/testData/pictures/osoba.jpg');
+            await expect(page.locator('form')).toContainText('File selected');
+            await expect(page.locator('form')).toContainText('osoba.jpg');
+            await page.getByRole('button', { name: 'Add User' }).click();
+    
+            await page.screenshot({ path: screenshotsPath + 'TC_01_valid_user/form.png' });
+        });
 
-        await page.screenshot({ path: screenshotsPath + 'TC_01_valid_user/form.png' });
-
-        await expect(page).toHaveURL("/users");
-        await page.screenshot({ path: screenshotsPath + 'TC_01_valid_user/valid_user.png' });
+        await test.step('Step description', async () => {
+            await expect(page).toHaveURL("/users");
+            await page.screenshot({ path: screenshotsPath + 'TC_01_valid_user/valid_user.png' });
+        });
 
     });
 
@@ -69,10 +78,51 @@ test.describe('TS 03 User Registration', () => {
         await page.getByRole('button', { name: 'Add User' }).click();
         await expect(page.getByRole('alert')).toContainText('Please enter a valid email address');
         await page.screenshot({ path: screenshotsPath + 'TC_02_invalid_email/error_message.png' });
-        
-
-       
+           
     });
+
+    test('TC 03 User already exists', async ({ page }) => {
+        await test.step('Step description', async () => {
+            await page.getByRole('button', { name: '+ Add User' }).click();
+            await expect(page).toHaveURL("/users/add");
+            await expect(page.getByText('Add New UserUsername *First')).toBeVisible();
+        });
+
+        await test.step('Step description', async () => {
+            await page.getByRole('textbox', { name: 'Username *' }).click();
+            await page.getByRole('textbox', { name: 'Username *' }).fill("imilanovi20");
+            await page.getByRole('textbox', { name: 'First Name *' }).click();
+            await page.getByRole('textbox', { name: 'First Name *' }).fill("Ivan");
+            await page.getByRole('textbox', { name: 'First Name *' }).press('Tab');
+            await page.getByRole('textbox', { name: 'Last Name *' }).click();
+            await page.getByRole('textbox', { name: 'Last Name *' }).fill('Milanović-Litre');
+            await page.getByRole('textbox', { name: 'Email *' }).click();
+            await page.getByRole('textbox', { name: 'Email *' }).fill('imilanovi20@student.foi.hr');
+        });
+
+        await test.step('Step description', async () => {
+            await page.getByRole('button', { name: '▼' }).click();
+            await page.getByText('User', { exact: true }).click();
+            await page.getByRole('button', { name: 'Add User' }).click();
+        });
+
+        await test.step('Step description', async () => {
+            await expect(page).toHaveURL("/users/add");
+            await expect(page.getByRole('alert')).toContainText('Request failed with status code 400');
+            await page.screenshot({ path: screenshotsPath + 'TC_03_user_already_exists/form.png' });
+        });       
+    });
+
+    test('TC 04 Delete existing User', async ({ page }) => {
+        await test.step('Step description', async () => {
+            await expect(page.locator('div').filter({ hasText: 'imilanovi20Userimilanovi20@' }).nth(3)).toBeVisible();
+            page.once('dialog', dialog => {
+                console.log(`Dialog message: ${dialog.message()}`);
+                dialog.accept();
+            });
+            await page.getByRole('button').nth(3).click();
+        });
+  });
 
 });
 /*
@@ -152,5 +202,11 @@ test('test', async ({ page }) => {
   await page.getByText('Administrator').click();
   await page.getByRole('button', { name: 'Add User' }).click();
   await expect(page.getByRole('alert')).toContainText('Request failed with status code 400');
+    await expect(page.locator('div').filter({ hasText: 'imilanovi20Userimilanovi20@' }).nth(3)).toBeVisible();
+  page.once('dialog', dialog => {
+    console.log(`Dialog message: ${dialog.message()}`);
+    dialog.dismiss().catch(() => {});
+  });
+  await page.getByRole('button').nth(3).click();
 });
 */

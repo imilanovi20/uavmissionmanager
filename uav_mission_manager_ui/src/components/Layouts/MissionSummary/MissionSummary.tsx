@@ -128,6 +128,7 @@ const MissionSummary = ({
     };
 
     // Get all formations from waypoints
+
     const formations = waypoints.reduce((acc, wp, wpIndex) => {
         if (wpIndex === 0) {
             acc.push({

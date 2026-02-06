@@ -143,12 +143,12 @@ const MissionWizard = () => {
                 weatherCode: weatherPermits.weather?.iconCode || 0,
             };
 
-            const permitData : PermitDataDto = {
+            const permitData: PermitDataDto = {
                 operationCategory: weatherPermits.operationCategory?.operationCategory || "Undefined",
                 heaviestUAV: weatherPermits.operationCategory?.heviestUAV.weight || 0,
                 uavOperationClass: weatherPermits.operationCategory?.uavClass || 'Undefined',
                 zoneOperationClass: weatherPermits.operationCategory?.zoneClass || 'Undefined',
-                isRecordingPermissionRequired: weatherPermits.operationCategory?.success || false,
+                isRecordingPermissionRequired: weatherPermits.recordingPermission?.isRecordingPermissionRequired || false,  // ISPRAVNO
                 crossesAirspace: weatherPermits.airspaceCheck?.crossesAirspace || false,
                 crossesAirspaceMessage: weatherPermits.airspaceCheck?.message || '',
                 violations: weatherPermits.airspaceCheck?.violations as AirspaceViolationDto[] || []
