@@ -15,5 +15,6 @@ namespace UAV_Mission_Manager_BAL.Services.UserService
         public Task<UserLoginResponseDto> LoginAsync(UserLoginDto loginDto);
         Task<UserDto> GetCurrentUserAsync(string username);
         public Task<List<UserDto>> GetAllUsersAsync();
+        Task<bool> DeleteUserAsync(string username);
     }
 }

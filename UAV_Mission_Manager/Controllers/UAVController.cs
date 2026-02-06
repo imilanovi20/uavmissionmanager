@@ -146,5 +146,33 @@ namespace UAV_Mission_Manager_API.Controllers
             }
         }
 
+        /// <summary>
+        /// Delete UAV by ID
+        /// </summary>
+        [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> DeleteUAV(int id)
+        {
+            try
+            {
+                var result = await _uavService.DeleteUAVAsync(id);
+
+                if (!result)
+                {
+                    return NotFound(new { message = "UAV not found" });
+                }
+
+                return Ok(new { message = "UAV successfully deleted" });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { message = "Access denied" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while deleting UAV" });
+            }
+        }
+
     }
 }
