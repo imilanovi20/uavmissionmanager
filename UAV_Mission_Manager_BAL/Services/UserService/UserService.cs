@@ -235,6 +235,26 @@ namespace UAV_Mission_Manager_BAL.Services.UserService
             }
         }
 
+        public async Task<bool> DeleteUserAsync(string username)
+        {
+            try
+            {
+                var user = await GetUserByUsername(username);
+
+                if (user == null)
+                    return false;
+
+                _userRepository.Delete(user);
+                await _userRepository.SaveAsync();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while deleting user: {Username}", username);
+                return false;
+            }
+        }
+
         private async Task<User?> GetUserByEmail(String email)
         {
             return await _userRepository

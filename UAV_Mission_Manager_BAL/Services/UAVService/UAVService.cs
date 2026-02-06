@@ -124,8 +124,27 @@ namespace UAV_Mission_Manager_BAL.Services.UAVService
             {
                 return false;
             }
+        }
 
+        public async Task<bool> DeleteUAVAsync(int id)
+        {
+            try
+            {
+                var uav = await _uavRepository
+                    .GetAll()
+                    .FirstOrDefaultAsync(u => u.Id == id);
 
+                if (uav == null)
+                    return false;
+
+                _uavRepository.Delete(uav);
+                await _uavRepository.SaveAsync();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                return false;
+            }
         }
     }
 }

@@ -14,6 +14,7 @@ namespace UAV_Mission_Manager_BAL.Services.UAVService
         Task<UAVDto> GetUAVByIdAsync(int id);
         Task<UAVDto> CreateUAVAsync(CreateUAVDto createUAVDto);
         Task<bool> AssignEquipmentToUAVAsync(UAVEquipmentAssignmentDto assignment);
+        Task<bool> DeleteUAVAsync(int id);
 
     }
 }

@@ -124,6 +124,34 @@ namespace UAV_Mission_Manager_API.Controllers
             }
         }
 
+        /// <summary>
+        /// Delete user by username (Admin only)
+        /// </summary>
+        [HttpDelete("{username}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> DeleteUser(string username)
+        {
+            try
+            {
+                var result = await _userService.DeleteUserAsync(username);
+
+                if (!result)
+                {
+                    return NotFound(new { message = "User not found" });
+                }
+
+                return Ok(new { message = "User successfully deleted" });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { message = "Access denied" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while deleting user" });
+            }
+        }
+
 
     }
 }
