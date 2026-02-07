@@ -1,4 +1,3 @@
-// tests/helpers/auth.ts
 import { Page, expect } from '@playwright/test';
 
 export async function loginAsAdmin(page: Page) {

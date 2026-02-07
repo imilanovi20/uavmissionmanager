@@ -12,7 +12,10 @@ namespace UAV_Mission_Manager_BAL.Services.TaskService
     {
         Task<(TaskDto Task, int UpdatedFormationOrder)> CreateTaskAsync(CreateTaskDto dto, int waypointId, int missionId, int currentFormationOrder);
 
-        Task<List<TaskDto>> CreateTasksAsync(List<CreateTaskDto> dtos, int waypointId);
+        Task<(List<TaskDto> Tasks, int UpdatedFormationOrder)> CreateTasksAsync(List<CreateTaskDto> dtos,
+            int waypointId,
+            int missionId,
+            int currentFormationOrder);
 
         Task<TaskDto> GetTaskByIdAsync(int id);
 

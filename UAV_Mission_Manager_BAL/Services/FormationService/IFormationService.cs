@@ -12,6 +12,7 @@ namespace UAV_Mission_Manager_BAL.Services.FormationService
         Task<FormationDto> CreateFormationAsync(CreateFormationDto dto);
         Task<FormationDto> GetFormationByIdAsync(int id);
         Task<List<FormationDto>> GetFormationsByMissionIdAsync(int missionId);
+        Task<List<FormationDto>> CreateFormationsAsync(List<CreateFormationDto> dtos);
 
     }
 }

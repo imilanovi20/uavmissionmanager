@@ -72,26 +72,69 @@ namespace UAV_Mission_Manager_BAL.Services.TaskService
             return (createdTask, updatedFormationOrder);
         }
 
-        public async Task<List<TaskDto>> CreateTasksAsync(List<CreateTaskDto> dtos, int waypointId)
+        public async Task<(List<TaskDto> Tasks, int UpdatedFormationOrder)> CreateTasksAsync(
+            List<CreateTaskDto> dtos,
+            int waypointId,
+            int missionId,
+            int currentFormationOrder)
         {
             foreach (var dto in dtos)
             {
                 await ValidateTaskAsync(dto);
-
-                var task = new MissionTask
-                {
-                    WaypointId = waypointId,
-                    Type = ParseTaskType(dto.TaskType),
-                    Order = dto.Order,
-                    UAVId = dto.UAVId,
-                    Parameters = dto.Parameters
-                };
-
-                _taskRepository.Add(task);
-                await _taskRepository.SaveAsync();
             }
 
-            return await GetTasksByWaypointIdAsync(waypointId);
+            var tasks = dtos.Select(dto => new MissionTask
+            {
+                WaypointId = waypointId,
+                Type = ParseTaskType(dto.TaskType),
+                Order = dto.Order,
+                UAVId = dto.UAVId,
+                Parameters = dto.Parameters
+            }).ToList();
+
+            foreach (var task in tasks)
+            {
+                _taskRepository.Add(task);
+            }
+
+            await _taskRepository.SaveAsync();
+
+            int updatedFormationOrder = currentFormationOrder;
+            var formationsToCreate = new List<CreateFormationDto>();
+
+            for (int i = 0; i < tasks.Count; i++)
+            {
+                if (tasks[i].Type == TaskType.ChangeFormation)
+                {
+                    var formationDto = JsonSerializer.Deserialize<CreateFormationDto>(
+                        dtos[i].Parameters,
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                    if (formationDto != null)
+                    {
+                        updatedFormationOrder++;
+                        formationDto.Order = updatedFormationOrder;
+                        formationDto.MissionId = missionId;
+                        formationsToCreate.Add(formationDto);
+                    }
+                }
+            }
+
+            if (formationsToCreate.Any())
+            {
+                await _formationService.CreateFormationsAsync(formationsToCreate);
+            }
+
+            var taskDtos = tasks.Select(t => new TaskDto
+            {
+                Id = t.Id,
+                Type = t.Type.ToString(),
+                Order = t.Order,
+                UAVId = t.UAVId,
+                Parameters = t.Parameters
+            }).ToList();
+
+            return (taskDtos, updatedFormationOrder);
         }
 
         public async Task<TaskDto> GetTaskByIdAsync(int id)

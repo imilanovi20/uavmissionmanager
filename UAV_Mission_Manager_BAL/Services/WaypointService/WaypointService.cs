@@ -42,20 +42,23 @@ namespace UAV_Mission_Manager_BAL.Services.WaypointService
             foreach (var dto in dtos)
             {
                 ValidateWaypoint(dto);
-
-                var waypoint = new Waypoint
-                {
-                    MissionId = missionId,
-                    OrderIndex = dto.Order,  
-                    Latitude = dto.Latitude,
-                    Longitude = dto.Longitude
-                };
-
-                _waypointRepository.Add(waypoint);
-                await _waypointRepository.SaveAsync();
             }
 
-            return await GetWaypointsByMissionIdAsync(missionId);
+            var waypoints = dtos.Select(dto => new Waypoint
+            {
+                MissionId = missionId,
+                OrderIndex = dto.Order,
+                Latitude = dto.Latitude,
+                Longitude = dto.Longitude
+            }).ToList();
+
+            foreach (var waypoint in waypoints)
+            {
+                _waypointRepository.Add(waypoint);
+            }
+
+            await _waypointRepository.SaveAsync();
+            return waypoints.Select(MapToDto).ToList();
         }
 
         public async Task<WaypointDto> GetWaypointByIdAsync(int id)
