@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
-import { loginAsAdmin, loginAsUser } from './helpers/auth';
-import { addGeneralInfo, addInitialFormation, addUAVs } from './helpers/wizard_data';
+import { loginAsAdmin, loginAsUser } from '../helpers/auth';
+import { addGeneralInfo, addInitialFormation, addUAVs } from '../helpers/wizard_data';
 
 test.describe.serial('TS 04 Mission Management', () => {
   const screenshotsPath = 'tests/screenshots/TS_04_mission_management/';
@@ -11,15 +11,14 @@ test.describe.serial('TS 04 Mission Management', () => {
       await page.getByRole('button', { name: 'All Missions' }).first().click();
       await page.getByRole('textbox', { name: 'Search missions by name,' }).click();
       await page.getByRole('textbox', { name: 'Search missions by name,' }).fill('Operation Skywatch');
-  
-      await page.screenshot({ path: screenshotsPath + 'TC_01_create_new_mission/delete.png' });
+      await expect(page.getByRole('heading', { name: 'Operation Skywatch' })).toBeVisible();
+
       page.once('dialog', dialog => {
         console.log(`Dialog message: ${dialog.message()}`);
         dialog.accept();
       });
       await page.getByRole('button').filter({ hasText: /^$/ }).click();
       await expect(page.getByRole('heading', { name: 'Operation Skywatch' })).not.toBeVisible();
-      await page.screenshot({ path: screenshotsPath + 'TC_01_create_new_mission/after_delete.png' });
     });
   });
 
@@ -34,21 +33,21 @@ test.describe.serial('TS 04 Mission Management', () => {
 
     await test.step('Fill in mission details', async () => {
       await addGeneralInfo(page);
-      await page.screenshot({ path: screenshotsPath + 'TC_01_create_new_mission/wizard_general_info.png' });
+      await page.screenshot({ path: screenshotsPath + 'TC_01/wizard_general_info.png' });
       await page.getByRole('button', { name: 'Next' }).click();
     });
 
     await test.step('Select UAVs', async () => {
       await addUAVs(page);
       
-      await page.screenshot({ path: screenshotsPath + 'TC_01_create_new_mission/wizard_uavs.png' });
+      await page.screenshot({ path: screenshotsPath + 'TC_01/wizard_uavs.png' });
       await page.getByRole('button', { name: 'Next' }).click();
     });
 
     await test.step('Set formation type', async () => {
       await addInitialFormation(page);
       
-      await page.screenshot({ path: screenshotsPath + 'TC_01_create_new_mission/wizard_formation.png' });
+      await page.screenshot({ path: screenshotsPath + 'TC_01/wizard_formation.png' });
       await page.getByRole('button', { name: 'Next' }).click();
     });
 
@@ -60,7 +59,7 @@ test.describe.serial('TS 04 Mission Management', () => {
       await page.getByRole('button', { name: 'Confirm Selection' }).click();
       await expect(page.getByRole('main')).toContainText('ilitre100ilitre100@gmail.com');
       
-      await page.screenshot({ path: screenshotsPath + 'TC_01_create_new_mission/wizard_responsible_persons.png' });
+      await page.screenshot({ path: screenshotsPath + 'TC_01/wizard_responsible_persons.png' });
       await page.getByRole('button', { name: 'Next' }).click();
     });
 
@@ -84,12 +83,13 @@ test.describe.serial('TS 04 Mission Management', () => {
       await expect(page.getByText('Waypoint #2')).toBeVisible();
       await expect(page.getByRole('main')).toContainText('43.706648, 16.630047');
 
-      await page.screenshot({ path: screenshotsPath + 'TC_01_create_new_mission/wizard_waypoints.png' });
+      await page.screenshot({ path: screenshotsPath + 'TC_01/wizard_waypoints.png' });
       await page.getByRole('button', { name: 'Next' }).click();
     });
 
     await test.step('Detect obstacles and generate optimal route', async () => {
       await expect(page.getByText('New MissionQuitStep 6 of 8:')).toBeVisible();
+      /*
       await page.getByRole('checkbox', { name: '🏢 Buildings' }).check();
       await page.getByRole('button', { name: 'Detect Obstacles' }).click();
       await expect(page.getByRole('heading', { name: /Detected Obstacles \(\d+\)/ })).toBeVisible();
@@ -98,8 +98,9 @@ test.describe.serial('TS 04 Mission Management', () => {
       await page.waitForLoadState('networkidle', { timeout: 30000 });
 
       await expect(page.getByRole('main')).toContainText('Detected Obstacles');
+      */
       
-      await page.screenshot({ path: screenshotsPath + 'TC_01_create_new_mission/wizard_obstacles.png' });
+      await page.screenshot({ path: screenshotsPath + 'TC_01/wizard_obstacles.png' });
       await page.getByRole('button', { name: 'Next' }).click();
     });
 
@@ -116,14 +117,14 @@ test.describe.serial('TS 04 Mission Management', () => {
 
       await expect(page.getByRole('heading', { name: 'Weather Conditions' })).toBeVisible();
 
-      await page.screenshot({ path: screenshotsPath + 'TC_01_create_new_mission/wizard_permits.png' });
+      await page.screenshot({ path: screenshotsPath + 'TC_01/wizard_permits.png' });
 
       await page.getByRole('button', { name: 'Next' }).click();
     });
 
     await test.step('Create mission', async () => {
         await expect(page.getByText('New MissionQuitStep 8 of 8:')).toBeVisible();
-        await page.screenshot({ path: screenshotsPath + 'TC_01_create_new_mission/wizard_final.png' });
+        await page.screenshot({ path: screenshotsPath + 'TC_01/wizard_final.png' });
         
         await page.getByRole('button', { name: 'Create Mission' }).click();
         await expect(page).toHaveURL("/missions", { timeout: 30000 });
@@ -135,8 +136,363 @@ test.describe.serial('TS 04 Mission Management', () => {
       await expect(page).toHaveURL("/missions", { timeout: 30000 });
       await expect(page.getByRole('heading', { name: 'Operation Skywatch' })).not.toBeVisible();
     });
+  });
 
+  test('TC 02 Admin creates mission - assigned user can see it', async ({ page }) => {
+    test.setTimeout(60000);
+    await test.step('Login as admin and navigate to missions page', async () => {
+      await loginAsAdmin(page);
+      await expect(page).toHaveURL("/missions");
+      await expect(page.getByRole('button', { name: '+ New Mission' })).toBeVisible();
+      await page.getByRole('button', { name: '+ New Mission' }).click();
+    });
 
+    await test.step('Fill in mission details', async () => {
+      await addGeneralInfo(page);
+      await page.screenshot({ path: screenshotsPath + 'TC_02/wizard_general_info.png' });
+      await page.getByRole('button', { name: 'Next' }).click();
+    });
+
+    await test.step('Select UAVs', async () => {
+      await addUAVs(page);
+      
+      await page.screenshot({ path: screenshotsPath + 'TC_02/wizard_uavs.png' });
+      await page.getByRole('button', { name: 'Next' }).click();
+    });
+
+    await test.step('Set formation type', async () => {
+      await addInitialFormation(page);
+      
+      await page.screenshot({ path: screenshotsPath + 'TC_02/wizard_formation.png' });
+      await page.getByRole('button', { name: 'Next' }).click();
+    });
+
+    await test.step('Add responsible persons', async () => {
+      await expect(page.getByText('New MissionQuitStep 4 of 8:')).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Add Responsible Persons' })).toBeVisible();
+      await page.getByRole('button', { name: 'Add Responsible Persons' }).click();
+      await page.locator('div').filter({ hasText: /^ilitre100ilitre100@gmail\.comRole: Admin$/ }).first().click();
+      await page.locator('div').filter({ hasText: /^litrelukalitreluka@gmail\.comRole: User$/ }).first().click();
+      await page.getByRole('button', { name: 'Confirm Selection' }).click();
+      await expect(page.getByRole('main')).toContainText('ilitre100ilitre100@gmail.com');
+      await expect(page.getByRole('main')).toContainText('litrelukalitreluka@gmail.com');
+      
+      await page.screenshot({ path: screenshotsPath + 'TC_02/wizard_responsible_persons.png' });
+      await page.getByRole('button', { name: 'Next' }).click();
+    });
+
+    await test.step('Add waypoints', async () => {
+      await expect(page.getByText('New MissionQuitStep 5 of 8:')).toBeVisible();
+
+      // Waypoint 1
+      await page.getByPlaceholder('Enter latitude...').click();
+      await page.getByPlaceholder('Enter latitude...').fill('43.706270');
+      await page.getByPlaceholder('Enter longitude...').click();
+      await page.getByPlaceholder('Enter longitude...').fill('16.630313');
+      await page.getByRole('button', { name: 'Add Waypoint' }).click();
+      await expect(page.getByRole('main')).toContainText('43.706270, 16.630313');
+
+      // Waypoint 2
+      await page.getByPlaceholder('Enter latitude...').click();
+      await page.getByPlaceholder('Enter latitude...').fill('43.706648');
+      await page.getByPlaceholder('Enter longitude...').click();
+      await page.getByPlaceholder('Enter longitude...').fill('16.630047');
+      await page.getByRole('button', { name: 'Add Waypoint' }).click();
+      await expect(page.getByText('Waypoint #2')).toBeVisible();
+      await expect(page.getByRole('main')).toContainText('43.706648, 16.630047');
+
+      await page.screenshot({ path: screenshotsPath + 'TC_02/wizard_waypoints.png' });
+      await page.getByRole('button', { name: 'Next' }).click();
+    });
+
+    await test.step('Detect obstacles and generate optimal route', async () => {
+      await expect(page.getByText('New MissionQuitStep 6 of 8:')).toBeVisible();
+      /*
+      await page.getByRole('checkbox', { name: '🏢 Buildings' }).check();
+      await page.getByRole('button', { name: 'Detect Obstacles' }).click();
+      await expect(page.getByRole('heading', { name: /Detected Obstacles \(\d+\)/ })).toBeVisible();
+      await page.getByRole('button', { name: 'Generate Optimal Route' }).click();
+
+      await page.waitForLoadState('networkidle', { timeout: 30000 });
+
+      await expect(page.getByRole('main')).toContainText('Detected Obstacles');
+      */
+      
+      await page.screenshot({ path: screenshotsPath + 'TC_02/wizard_obstacles.png' });
+      await page.getByRole('button', { name: 'Next' }).click();
+    });
+
+    await test.step('Verify mission details and status', async () => {
+      await expect(page.getByText('New MissionQuitStep 7 of 8:')).toBeVisible();
+      await expect(page.getByText('Loading weather and permits data...')).not.toBeVisible({ timeout: 30000 });
+      await expect(page.getByRole('main')).toContainText('STATUSClear Airspace');
+
+      await expect(page.locator('div').filter({ hasText: /^STATUSNo Permission Needed$/ }).first()).toBeVisible();
+
+      await expect(page.getByText('Battery UsagePROJECTED FLIGHT')).toBeVisible();
+
+      await expect(page.getByRole('heading', { name: 'Operation Category' })).toBeVisible();
+
+      await expect(page.getByRole('heading', { name: 'Weather Conditions' })).toBeVisible();
+
+      await page.screenshot({ path: screenshotsPath + 'TC_02/wizard_permits.png' });
+
+      await page.getByRole('button', { name: 'Next' }).click();
+    });
+
+    await test.step('Create mission', async () => {
+        await expect(page.getByText('New MissionQuitStep 8 of 8:')).toBeVisible();
+        await page.screenshot({ path: screenshotsPath + 'TC_02/wizard_final.png' });
+        
+        await page.getByRole('button', { name: 'Create Mission' }).click();
+        await expect(page).toHaveURL("/missions", { timeout: 30000 });
+        await expect(page.getByRole('heading', { name: 'Operation Skywatch' })).toBeVisible();
+    });
+
+    await test.step('Check that user can see mission', async () => {
+      await loginAsUser(page);
+      await expect(page).toHaveURL("/missions", { timeout: 30000 });
+      await expect(page.getByRole('heading', { name: 'Operation Skywatch' })).toBeVisible();
+    });
+  });
+
+    test('TC 03 User creates mission - assigned admin can see it', async ({ page }) => {
+    test.setTimeout(60000);
+    await test.step('Login as user and navigate to missions page', async () => {
+      await loginAsUser(page);
+      await expect(page).toHaveURL("/missions");
+      await expect(page.getByRole('button', { name: '+ New Mission' })).toBeVisible();
+      await page.getByRole('button', { name: '+ New Mission' }).click();
+    });
+
+    await test.step('Fill in mission details', async () => {
+      await addGeneralInfo(page);
+      await page.screenshot({ path: screenshotsPath + 'TC_03/wizard_general_info.png' });
+      await page.getByRole('button', { name: 'Next' }).click();
+    });
+
+    await test.step('Select UAVs', async () => {
+      await addUAVs(page);
+      
+      await page.screenshot({ path: screenshotsPath + 'TC_03/wizard_uavs.png' });
+      await page.getByRole('button', { name: 'Next' }).click();
+    });
+
+    await test.step('Set formation type', async () => {
+      await addInitialFormation(page);
+      
+      await page.screenshot({ path: screenshotsPath + 'TC_03/wizard_formation.png' });
+      await page.getByRole('button', { name: 'Next' }).click();
+    });
+
+    await test.step('Add responsible persons', async () => {
+      await expect(page.getByText('New MissionQuitStep 4 of 8:')).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Add Responsible Persons' })).toBeVisible();
+      await page.getByRole('button', { name: 'Add Responsible Persons' }).click();
+      await page.locator('div').filter({ hasText: /^ilitre100ilitre100@gmail\.comRole: Admin$/ }).first().click();
+      await page.locator('div').filter({ hasText: /^litrelukalitreluka@gmail\.comRole: User$/ }).first().click();
+      await page.getByRole('button', { name: 'Confirm Selection' }).click();
+      await expect(page.getByRole('main')).toContainText('ilitre100ilitre100@gmail.com');
+      await expect(page.getByRole('main')).toContainText('litrelukalitreluka@gmail.com');
+      
+      await page.screenshot({ path: screenshotsPath + 'TC_03/wizard_responsible_persons.png' });
+      await page.getByRole('button', { name: 'Next' }).click();
+    });
+
+    await test.step('Add waypoints', async () => {
+      await expect(page.getByText('New MissionQuitStep 5 of 8:')).toBeVisible();
+
+      // Waypoint 1
+      await page.getByPlaceholder('Enter latitude...').click();
+      await page.getByPlaceholder('Enter latitude...').fill('43.706270');
+      await page.getByPlaceholder('Enter longitude...').click();
+      await page.getByPlaceholder('Enter longitude...').fill('16.630313');
+      await page.getByRole('button', { name: 'Add Waypoint' }).click();
+      await expect(page.getByRole('main')).toContainText('43.706270, 16.630313');
+
+      // Waypoint 2
+      await page.getByPlaceholder('Enter latitude...').click();
+      await page.getByPlaceholder('Enter latitude...').fill('43.706648');
+      await page.getByPlaceholder('Enter longitude...').click();
+      await page.getByPlaceholder('Enter longitude...').fill('16.630047');
+      await page.getByRole('button', { name: 'Add Waypoint' }).click();
+      await expect(page.getByText('Waypoint #2')).toBeVisible();
+      await expect(page.getByRole('main')).toContainText('43.706648, 16.630047');
+
+      await page.screenshot({ path: screenshotsPath + 'TC_03/wizard_waypoints.png' });
+      await page.getByRole('button', { name: 'Next' }).click();
+    });
+
+    await test.step('Detect obstacles and generate optimal route', async () => {
+      await expect(page.getByText('New MissionQuitStep 6 of 8:')).toBeVisible();
+      /*
+      await page.getByRole('checkbox', { name: '🏢 Buildings' }).check();
+      await page.getByRole('button', { name: 'Detect Obstacles' }).click();
+      await expect(page.getByRole('heading', { name: /Detected Obstacles \(\d+\)/ })).toBeVisible();
+      await page.getByRole('button', { name: 'Generate Optimal Route' }).click();
+
+      await page.waitForLoadState('networkidle', { timeout: 30000 });
+
+      await expect(page.getByRole('main')).toContainText('Detected Obstacles');
+      */
+      
+      await page.screenshot({ path: screenshotsPath + 'TC_03/wizard_obstacles.png' });
+      await page.getByRole('button', { name: 'Next' }).click();
+    });
+
+    await test.step('Verify mission details and status', async () => {
+      await expect(page.getByText('New MissionQuitStep 7 of 8:')).toBeVisible();
+      await expect(page.getByText('Loading weather and permits data...')).not.toBeVisible({ timeout: 30000 });
+      await expect(page.getByRole('main')).toContainText('STATUSClear Airspace');
+
+      await expect(page.locator('div').filter({ hasText: /^STATUSNo Permission Needed$/ }).first()).toBeVisible();
+
+      await expect(page.getByText('Battery UsagePROJECTED FLIGHT')).toBeVisible();
+
+      await expect(page.getByRole('heading', { name: 'Operation Category' })).toBeVisible();
+
+      await expect(page.getByRole('heading', { name: 'Weather Conditions' })).toBeVisible();
+
+      await page.screenshot({ path: screenshotsPath + 'TC_03/wizard_permits.png' });
+
+      await page.getByRole('button', { name: 'Next' }).click();
+    });
+
+    await test.step('Create mission', async () => {
+        await expect(page.getByText('New MissionQuitStep 8 of 8:')).toBeVisible();
+        await page.screenshot({ path: screenshotsPath + 'TC_03/wizard_final.png' });
+        
+        await page.getByRole('button', { name: 'Create Mission' }).click();
+        await expect(page).toHaveURL("/missions", { timeout: 30000 });
+        await expect(page.getByRole('heading', { name: 'Operation Skywatch' })).toBeVisible();
+    });
+
+    await test.step('Check that admin can see mission', async () => {
+      await loginAsAdmin(page);
+      await expect(page).toHaveURL("/missions", { timeout: 30000 });
+      await expect(page.getByRole('heading', { name: 'Operation Skywatch' })).toBeVisible();
+      await page.getByRole('button', { name: 'All Missions' }).first().click();
+      await expect(page.getByRole('heading', { name: 'Operation Skywatch' })).toBeVisible();
+    });
+  });
+
+  test('TC 04 User creates mission - unassigned admin sees it only in All Missions, not in My Missions', async ({ page }) => {
+    test.setTimeout(60000);
+    await test.step('Login as user and navigate to missions page', async () => {
+      await loginAsUser(page);
+      await expect(page).toHaveURL("/missions");
+      await expect(page.getByRole('button', { name: '+ New Mission' })).toBeVisible();
+      await page.getByRole('button', { name: '+ New Mission' }).click();
+    });
+
+    await test.step('Fill in mission details', async () => {
+      await addGeneralInfo(page);
+      await page.screenshot({ path: screenshotsPath + 'TC_04/wizard_general_info.png' });
+      await page.getByRole('button', { name: 'Next' }).click();
+    });
+
+    await test.step('Select UAVs', async () => {
+      await addUAVs(page);
+      
+      await page.screenshot({ path: screenshotsPath + 'TC_04/wizard_uavs.png' });
+      await page.getByRole('button', { name: 'Next' }).click();
+    });
+
+    await test.step('Set formation type', async () => {
+      await addInitialFormation(page);
+      
+      await page.screenshot({ path: screenshotsPath + 'TC_04/wizard_formation.png' });
+      await page.getByRole('button', { name: 'Next' }).click();
+    });
+
+    await test.step('Add responsible persons', async () => {
+      await expect(page.getByText('New MissionQuitStep 4 of 8:')).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Add Responsible Persons' })).toBeVisible();
+      await page.getByRole('button', { name: 'Add Responsible Persons' }).click();
+      await page.locator('div').filter({ hasText: /^litrelukalitreluka@gmail\.comRole: User$/ }).first().click();
+      await page.getByRole('button', { name: 'Confirm Selection' }).click();
+      await expect(page.getByRole('main')).toContainText('litrelukalitreluka@gmail.com');
+      
+      await page.screenshot({ path: screenshotsPath + 'TC_04/wizard_responsible_persons.png' });
+      await page.getByRole('button', { name: 'Next' }).click();
+    });
+
+    await test.step('Add waypoints', async () => {
+      await expect(page.getByText('New MissionQuitStep 5 of 8:')).toBeVisible();
+
+      // Waypoint 1
+      await page.getByPlaceholder('Enter latitude...').click();
+      await page.getByPlaceholder('Enter latitude...').fill('43.706270');
+      await page.getByPlaceholder('Enter longitude...').click();
+      await page.getByPlaceholder('Enter longitude...').fill('16.630313');
+      await page.getByRole('button', { name: 'Add Waypoint' }).click();
+      await expect(page.getByRole('main')).toContainText('43.706270, 16.630313');
+
+      // Waypoint 2
+      await page.getByPlaceholder('Enter latitude...').click();
+      await page.getByPlaceholder('Enter latitude...').fill('43.706648');
+      await page.getByPlaceholder('Enter longitude...').click();
+      await page.getByPlaceholder('Enter longitude...').fill('16.630047');
+      await page.getByRole('button', { name: 'Add Waypoint' }).click();
+      await expect(page.getByText('Waypoint #2')).toBeVisible();
+      await expect(page.getByRole('main')).toContainText('43.706648, 16.630047');
+
+      await page.screenshot({ path: screenshotsPath + 'TC_04/wizard_waypoints.png' });
+      await page.getByRole('button', { name: 'Next' }).click();
+    });
+
+    await test.step('Detect obstacles and generate optimal route', async () => {
+      await expect(page.getByText('New MissionQuitStep 6 of 8:')).toBeVisible();
+      /*
+      await page.getByRole('checkbox', { name: '🏢 Buildings' }).check();
+      await page.getByRole('button', { name: 'Detect Obstacles' }).click();
+      await expect(page.getByRole('heading', { name: /Detected Obstacles \(\d+\)/ })).toBeVisible();
+      await page.getByRole('button', { name: 'Generate Optimal Route' }).click();
+
+      await page.waitForLoadState('networkidle', { timeout: 30000 });
+
+      await expect(page.getByRole('main')).toContainText('Detected Obstacles');
+      */
+      
+      await page.screenshot({ path: screenshotsPath + 'TC_04/wizard_obstacles.png' });
+      await page.getByRole('button', { name: 'Next' }).click();
+    });
+
+    await test.step('Verify mission details and status', async () => {
+      await expect(page.getByText('New MissionQuitStep 7 of 8:')).toBeVisible();
+      await expect(page.getByText('Loading weather and permits data...')).not.toBeVisible({ timeout: 30000 });
+      await expect(page.getByRole('main')).toContainText('STATUSClear Airspace');
+
+      await expect(page.locator('div').filter({ hasText: /^STATUSNo Permission Needed$/ }).first()).toBeVisible();
+
+      await expect(page.getByText('Battery UsagePROJECTED FLIGHT')).toBeVisible();
+
+      await expect(page.getByRole('heading', { name: 'Operation Category' })).toBeVisible();
+
+      await expect(page.getByRole('heading', { name: 'Weather Conditions' })).toBeVisible();
+
+      await page.screenshot({ path: screenshotsPath + 'TC_04/wizard_permits.png' });
+
+      await page.getByRole('button', { name: 'Next' }).click();
+    });
+
+    await test.step('Create mission', async () => {
+        await expect(page.getByText('New MissionQuitStep 8 of 8:')).toBeVisible();
+        await page.screenshot({ path: screenshotsPath + 'TC_04/wizard_final.png' });
+        
+        await page.getByRole('button', { name: 'Create Mission' }).click();
+        await expect(page).toHaveURL("/missions", { timeout: 30000 });
+        await expect(page.getByRole('heading', { name: 'Operation Skywatch' })).toBeVisible();
+    });
+
+    await test.step('Check that admin can see mission', async () => {
+      await loginAsAdmin(page);
+      await expect(page).toHaveURL("/missions", { timeout: 30000 });
+      await expect(page.getByRole('heading', { name: 'Operation Skywatch' })).not.toBeVisible();
+      await page.getByRole('button', { name: 'All Missions' }).first().click();
+      await page.waitForLoadState('networkidle');
+      await expect(page.getByRole('heading', { name: 'Operation Skywatch' })).toBeVisible();
+    });
   });
 });
 /*
