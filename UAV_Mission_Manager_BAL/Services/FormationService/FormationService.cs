@@ -50,6 +50,67 @@ namespace UAV_Mission_Manager_BAL.Services.FormationService
             return await GetFormationByIdAsync(formation.Id);
         }
 
+        public async Task<List<FormationDto>> CreateFormationsAsync(List<CreateFormationDto> dtos)
+        {
+            if (dtos == null || !dtos.Any())
+            {
+                return new List<FormationDto>();
+            }
+
+            var formations = dtos.Select(dto => new Formation
+            {
+                MissionId = dto.MissionId,
+                FormationType = dto.FormationType,
+                Order = dto.Order
+            }).ToList();
+
+            foreach (var formation in formations)
+            {
+                _formationRepository.Add(formation);
+            }
+
+            await _formationRepository.SaveAsync();
+
+            var allPositions = new List<UAVPosition>();
+
+            for (int i = 0; i < formations.Count; i++)
+            {
+                var formation = formations[i];
+                var dto = dtos[i];
+
+                var positions = dto.UAVPositions.Select(posDto => new UAVPosition
+                {
+                    FormationId = formation.Id,
+                    UAVId = posDto.UAVId,
+                    RelativeX = posDto.RelativeX,
+                    RelativeY = posDto.RelativeY
+                }).ToList();
+
+                allPositions.AddRange(positions);
+            }
+
+            foreach (var position in allPositions)
+            {
+                _uavPositionRepository.Add(position);
+            }
+
+            await _uavPositionRepository.SaveAsync();
+
+            return formations.Select((formation, index) => new FormationDto
+            {
+                FormationType = formation.FormationType,
+                Order = formation.Order,
+                UAVPositions = dtos[index].UAVPositions
+                    .Select(up => new UAVPositionDto
+                    {
+                        UAVId = up.UAVId,
+                        RelativeX = up.RelativeX,
+                        RelativeY = up.RelativeY
+                    })
+                    .ToList()
+            }).ToList();
+        }
+
         public async Task<FormationDto> GetFormationByIdAsync(int id)
         {
             var formation = await _formationRepository.GetAll()

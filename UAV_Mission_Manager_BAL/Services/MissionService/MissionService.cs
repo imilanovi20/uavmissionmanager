@@ -90,6 +90,34 @@ namespace UAV_Mission_Manager_BAL.Services.MissionService
 
                 int currentFormationOrder = 0;
 
+                List<WaypointDto> createdWaypoints = null;
+                if (createMissionDto.Waypoints != null && createMissionDto.Waypoints.Any())
+                {
+                    createdWaypoints = await _waypointService.CreateWaypointsAsync(
+                        createMissionDto.Waypoints,
+                        mission.Id);
+                }
+
+                if (createMissionDto.Waypoints != null && createdWaypoints != null)
+                {
+                    for (int i = 0; i < createMissionDto.Waypoints.Count; i++)
+                    {
+                        var waypointDto = createMissionDto.Waypoints[i];
+                        var createdWaypoint = createdWaypoints[i];
+
+                        if (waypointDto.Tasks != null && waypointDto.Tasks.Any())
+                        {
+                            var (tasks, updatedOrder) = await _taskService.CreateTasksAsync(
+                                waypointDto.Tasks,
+                                createdWaypoint.Id,
+                                mission.Id,
+                                currentFormationOrder);
+
+                            currentFormationOrder = updatedOrder;
+                        }
+                    }
+                }
+                /*
                 foreach (var waypointDto in createMissionDto.Waypoints)
                 {
                     var createdWaypoint = await _waypointService.CreateWaypointAsync(
@@ -102,6 +130,7 @@ namespace UAV_Mission_Manager_BAL.Services.MissionService
                         currentFormationOrder = updatedOrder;
                     }
                 }
+                */
 
                 if (createMissionDto.Obstacles != null && createMissionDto.Obstacles.Any())
                 {
@@ -186,25 +215,27 @@ namespace UAV_Mission_Manager_BAL.Services.MissionService
             return mission;
         }
 
-
         private async Task AddUAVsToMission(int missionId, List<int> uavIds)
         {
-            foreach (var uavId in uavIds)
+            var existingUAVIds = await _uavRepository.GetAll()
+                .Where(u => uavIds.Contains(u.Id))
+                .Select(u => u.Id)
+                .ToListAsync();
+
+            var missingIds = uavIds.Except(existingUAVIds).ToList();
+            if (missingIds.Any())
             {
-                var uavExists = await _uavRepository.GetAll()
-                    .AnyAsync(u => u.Id == uavId);
+                throw new Exception($"UAVs not found: {string.Join(", ", missingIds)}");
+            }
 
-                if (!uavExists)
-                {
-                    throw new Exception($"UAV with ID {uavId} not found");
-                }
+            var missionUAVs = uavIds.Select(uavId => new MissionUAV
+            {
+                MissionId = missionId,
+                UAVId = uavId
+            }).ToList();
 
-                var missionUAV = new MissionUAV
-                {
-                    MissionId = missionId,
-                    UAVId = uavId
-                };
-
+            foreach (var missionUAV in missionUAVs)
+            {
                 _missionUAVRepository.Add(missionUAV);
             }
 
@@ -213,22 +244,25 @@ namespace UAV_Mission_Manager_BAL.Services.MissionService
 
         private async Task AddResponsibleUsers(int missionId, List<string> usernames)
         {
-            foreach (var username in usernames)
+            var existingUsernames = await _userRepository.GetAll()
+                .Where(u => usernames.Contains(u.Username))
+                .Select(u => u.Username)
+                .ToListAsync();
+
+            var missingUsernames = usernames.Except(existingUsernames).ToList();
+            if (missingUsernames.Any())
             {
-                var userExists = await _userRepository.GetAll()
-                    .AnyAsync(u => u.Username == username);
+                throw new Exception($"Users not found: {string.Join(", ", missingUsernames)}");
+            }
 
-                if (!userExists)
-                {
-                    throw new Exception($"User with username '{username}' not found");
-                }
+            var missionUsers = usernames.Select(username => new MissionUser
+            {
+                MissionId = missionId,
+                Username = username
+            }).ToList();
 
-                var missionUser = new MissionUser
-                {
-                    MissionId = missionId,
-                    Username = username
-                };
-
+            foreach (var missionUser in missionUsers)
+            {
                 _missionUserRepository.Add(missionUser);
             }
 
@@ -239,6 +273,7 @@ namespace UAV_Mission_Manager_BAL.Services.MissionService
         {
             var missions = await _missionRepository.GetAll()
                 .AsNoTracking()
+                .AsSplitQuery() 
                 .Include(m => m.MissionUAVs)
                     .ThenInclude(mu => mu.UAV)
                         .ThenInclude(u => u.UAV_AdditionalEquipments)
@@ -255,6 +290,7 @@ namespace UAV_Mission_Manager_BAL.Services.MissionService
         {
             var mission = await _missionRepository.GetAll()
                 .AsNoTracking()
+                .AsSplitQuery() 
                 .Include(m => m.MissionObstacles)
                     .ThenInclude(mo => mo.Obstacle)
                 .Include(m => m.MissionUAVs)
@@ -282,6 +318,7 @@ namespace UAV_Mission_Manager_BAL.Services.MissionService
         {
             var missions = await _missionRepository.GetAll()
                 .AsNoTracking()
+                .AsSplitQuery() 
                 .Include(m => m.MissionUAVs)
                     .ThenInclude(mu => mu.UAV)
                         .ThenInclude(u => u.UAV_AdditionalEquipments)

@@ -26,7 +26,12 @@ namespace UAV_Mission_Manager_BAL.Services.ObstacleService
             int missionId = dto.MissionId;
             var detectedObstacles = dto.Obstacles;
 
-            var result = new List<ObstacleDto>();
+            if (detectedObstacles == null || !detectedObstacles.Any())
+            {
+                return new List<ObstacleDto>();
+            }
+
+            var obstacleHashMap = new Dictionary<string, (List<Coordinate> coords, ObstacleDto obstacle)>();
 
             foreach (var ob in detectedObstacles)
             {
@@ -36,37 +41,87 @@ namespace UAV_Mission_Manager_BAL.Services.ObstacleService
 
                 var hash = Obstacle.CalculateCoordinateHash(coordinates);
 
-                var existingObstacle = _oRepository
-                    .GetAll()
-                    .FirstOrDefault(o => o.CoordinateHash == hash);
-
-                if (existingObstacle == null)
+                if (!obstacleHashMap.ContainsKey(hash))
                 {
-                    existingObstacle = new Obstacle
+                    obstacleHashMap[hash] = (coordinates, ob);
+                }
+            }
+
+            var allHashes = obstacleHashMap.Keys.ToList();
+            var existingObstacles = await _oRepository
+                .GetAll()
+                .Where(o => allHashes.Contains(o.CoordinateHash))
+                .ToDictionaryAsync(o => o.CoordinateHash, o => o);
+
+            var newObstacles = new List<Obstacle>();
+            var result = new List<ObstacleDto>();
+
+            foreach (var kvp in obstacleHashMap)
+            {
+                var hash = kvp.Key;
+                var coordinates = kvp.Value.coords;
+                var obstacleData = kvp.Value.obstacle;
+
+                Obstacle obstacle;
+
+                if (existingObstacles.TryGetValue(hash, out var existing))
+                {
+                    obstacle = existing;
+                }
+                else
+                {
+                    obstacle = new Obstacle
                     {
                         CoordinateHash = hash,
-                        Name = ob.Name,
-                        Type = ob.Type,
+                        Name = obstacleData.Name,
+                        Type = obstacleData.Type,
                         Coordinates = coordinates,
                     };
 
-                    _oRepository.Add(existingObstacle);
-                    await _oRepository.SaveAsync();
+                    newObstacles.Add(obstacle);
+                    existingObstacles[hash] = obstacle;
                 }
+            }
 
-                var savedObstacle = await GetObstacleByIdAsync(existingObstacle.Id);
-                result.Add(savedObstacle);
+            if (newObstacles.Any())
+            {
+                foreach (var obstacle in newObstacles)
+                {
+                    _oRepository.Add(obstacle);
+                }
+                await _oRepository.SaveAsync();
+            }
 
-                var missionObstacle = new MissionObstacle
+            var missionObstacles = new List<MissionObstacle>();
+
+            foreach (var kvp in obstacleHashMap)
+            {
+                var hash = kvp.Key;
+                var obstacle = existingObstacles[hash];
+
+                missionObstacles.Add(new MissionObstacle
                 {
                     MissionId = missionId,
-                    ObstacleId = existingObstacle.Id
-                };
+                    ObstacleId = obstacle.Id
+                });
 
-                _moRepository.Add(missionObstacle);
+                result.Add(new ObstacleDto
+                {
+                    Name = obstacle.Name,
+                    Type = obstacle.Type,
+                    Coordinates = obstacle.Coordinates
+                        .Select(c => new PointDto { Lat = c.Lat, Lng = c.Lng })
+                        .ToList(),
+                    BufferCoordinates = null
+                });
+            }
 
+            foreach (var mo in missionObstacles)
+            {
+                _moRepository.Add(mo);
             }
             await _moRepository.SaveAsync();
+
             return result;
         }
 

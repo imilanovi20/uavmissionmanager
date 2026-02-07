@@ -132,9 +132,14 @@ const MissionWizard = () => {
         navigate('/missions');
     };
 
+
     const handleSubmit = async () => {
+        console.time(' Total Mission Creation');
+
         try {
             setLoading(true);
+
+            // Priprema podataka (brzo)
             const weatherData: CreateWeatherDataDto = {
                 temperature: weatherPermits.weather?.temperature || 0,
                 windSpeed: weatherPermits.weather?.windSpeed || 0,
@@ -148,28 +153,28 @@ const MissionWizard = () => {
                 heaviestUAV: weatherPermits.operationCategory?.heviestUAV.weight || 0,
                 uavOperationClass: weatherPermits.operationCategory?.uavClass || 'Undefined',
                 zoneOperationClass: weatherPermits.operationCategory?.zoneClass || 'Undefined',
-                isRecordingPermissionRequired: weatherPermits.recordingPermission?.isRecordingPermissionRequired || false,  // ISPRAVNO
+                isRecordingPermissionRequired: weatherPermits.recordingPermission?.isRecordingPermissionRequired || false,
                 crossesAirspace: weatherPermits.airspaceCheck?.crossesAirspace || false,
                 crossesAirspaceMessage: weatherPermits.airspaceCheck?.message || '',
                 violations: weatherPermits.airspaceCheck?.violations as AirspaceViolationDto[] || []
-            }
+            };
 
-            const flightTimeData : FlightTimeDataDto = {
+            const flightTimeData: FlightTimeDataDto = {
                 projectedFlightTime: weatherPermits.projectedFlightTime?.projectedFlightTime || '',
                 uavFlightTimes: weatherPermits.projectedFlightTime?.flightTimeUAV || []
-            }
+            };
 
-            const optimalRoute : OptimalRouteDto = {
+            const optimalRoute: OptimalRouteDto = {
                 algorithm: routeOptimization.optimalRoute?.algorithm || 'None',
                 totalDistance: routeOptimization.optimalRoute?.totalDistance || 0,
                 totalPoints: routeOptimization.optimalRoute?.totalPoints || 0,
                 optimizationPointsAdded: routeOptimization.optimalRoute?.optimizationPointsAdded || 0,
                 points: routeOptimization.optimalRoute?.optimizedRoute || []
-            }
+            };
 
-            const obstacles : ObstacleDto[] = (routeOptimization.detectedObstacles as ObstacleDto[]) || [];
+            const obstacles: ObstacleDto[] = (routeOptimization.detectedObstacles as ObstacleDto[]) || [];
 
-            const formationPositions = formation.positions.length > 0 
+            const formationPositions = formation.positions.length > 0
                 ? formation.positions
                 : uavSelection.selectedUAVIds.map((uavId, index) => ({
                     uavId,
@@ -184,7 +189,7 @@ const MissionWizard = () => {
                 uavPositions: formationPositions
             };
 
-            const finalWaypoints = routeOptimization.optimalRoute 
+            const finalWaypoints = routeOptimization.optimalRoute
                 ? routeOptimization.optimalRoute.optimizedRoute.map(point => ({
                     latitude: point.lat,
                     longitude: point.lng,
@@ -208,13 +213,29 @@ const MissionWizard = () => {
                 waypoints: finalWaypoints
             };
 
-            console.log('Submitting Mission Data:', missionData);
+            console.log(' Submitting Mission Data:', missionData);
 
-            await missionService.createMission(missionData);
+            //  OPTIMIZED: API call sa error handlingom
+            const response = await missionService.createMission(missionData);
+
+            console.timeEnd(' Total Mission Creation');
+            console.log(' Mission created successfully:', response);
+
+            //  Kratko èekanje da korisnik vidi feedback
+            await new Promise(resolve => setTimeout(resolve, 500));
+
             navigate('/missions');
-        } catch (error) {
-            console.error('Failed to create mission:', error);
-            alert('Failed to create mission. Please try again.');
+
+        } catch (error: any) {
+            console.timeEnd(' Total Mission Creation');
+            console.error(' Failed to create mission:', error);
+
+            const errorMessage = error.response?.data?.message
+                || error.response?.data
+                || error.message
+                || 'Failed to create mission';
+
+            alert(`Failed to create mission: ${errorMessage}`);
         } finally {
             setLoading(false);
         }

@@ -36,10 +36,8 @@ class MissionService {
         }
     }
 
-    // DETAILS - SA cachingom
     async getMissionById(missionId: number): Promise<Mission> {
         try {
-            // Provjeri cache
             const cached = this.missionCache.get(missionId);
             if (cached && Date.now() - cached.timestamp < this.DETAIL_CACHE_DURATION) {
                 console.log(` Using cached mission detail ${missionId}`);
@@ -50,7 +48,6 @@ class MissionService {
             const response = await api.get<any>(`${ENDPOINTS.MISSIONS}/${missionId}`);
             const mission = this.mapMissionResponse(response.data);
 
-            // Spremi u cache
             this.missionCache.set(missionId, {
                 data: mission,
                 timestamp: Date.now()
@@ -63,13 +60,48 @@ class MissionService {
     }
 
     async createMission(missionData: CreateMissionDto): Promise<CreateMissionResponseDto> {
+        const startTime = performance.now();
+
+        console.log('SENDING_MISSION_DATA');
+        console.log('PAYLOAD_SIZE:', JSON.stringify(missionData).length, 'bytes');
+
         try {
-            const response = await api.post<CreateMissionResponseDto>(ENDPOINTS.MISSIONS, missionData);
+            // Start timing the actual API call
+            console.time('API_CALL_DURATION');
 
-            // Ne treba èistiti ništa - lista se ne cacheira
+            const response = await api.post<CreateMissionResponseDto>(
+                ENDPOINTS.MISSIONS,
+                missionData,
+                {
+                    timeout: 60000,
+                    // Compression if backend supports it
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept-Encoding': 'gzip, deflate'
+                    },
+                    // Don't transform response - faster
+                    transformResponse: [(data) => data]
+                }
+            );
 
-            return response.data;
-        } catch (error) {
+            console.timeEnd('API_CALL_DURATION');
+
+            const endTime = performance.now();
+            console.log('FRONTEND_OVERHEAD:', (endTime - startTime) - (performance.now() - startTime), 'ms');
+
+            // Parse response if needed
+            const parsedData = typeof response.data === 'string'
+                ? JSON.parse(response.data)
+                : response.data;
+
+            console.log('MISSION_CREATED:', parsedData);
+
+            return parsedData;
+
+        } catch (error: any) {
+            console.timeEnd('API_CALL_DURATION');
+            console.error('CREATE_MISSION_FAILED:', error.message);
+            console.error('ERROR_DETAILS:', error.response?.data);
             throw error;
         }
     }
@@ -85,7 +117,6 @@ class MissionService {
         }
     }
 
-    // Metoda za ruèno èišæenje detail cache-a
     clearDetailCache(missionId?: number): void {
         if (missionId) {
             this.missionCache.delete(missionId);
