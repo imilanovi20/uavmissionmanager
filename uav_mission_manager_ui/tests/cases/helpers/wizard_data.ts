@@ -1,5 +1,6 @@
 import { expect, Page } from "@playwright/test";
 import { getFutureDate } from "./date";
+import { loginAsAdmin } from "./auth";
 
 export async function addGeneralInfo(page: Page) {
     await expect(page).toHaveURL("/missions/new");
@@ -38,4 +39,91 @@ export async function addInitialFormation(page: Page) {
     await page.getByRole('button', { name: 'Circle' }).click();
     await expect(page.getByRole('button', { name: 'Auto-Arrange Circle Formation' })).toBeVisible();
     await page.getByRole('button', { name: 'Auto-Arrange Circle Formation' }).click();
+}
+
+export async function addResponsiblePersons(page: Page) {
+    await expect(page.getByText('New MissionQuitStep 4 of 8:')).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Add Responsible Persons' })).toBeVisible();
+      await page.getByRole('button', { name: 'Add Responsible Persons' }).click();
+      await page.locator('div').filter({ hasText: /^ilitre100ilitre100@gmail\.comRole: Admin$/ }).first().click();
+      await page.locator('div').filter({ hasText: /^litrelukalitreluka@gmail\.comRole: User$/ }).first().click();
+      await page.getByRole('button', { name: 'Confirm Selection' }).click();
+      await expect(page.getByRole('main')).toContainText('ilitre100ilitre100@gmail.com');
+      await expect(page.getByRole('main')).toContainText('litrelukalitreluka@gmail.com');
+} 
+
+export async function addWayointsForWaypoint_TaskConfiguration(page: Page) {
+    // Waypoint 1
+          await page.getByPlaceholder('Enter latitude...').click();
+          await page.getByPlaceholder('Enter latitude...').fill('43.706270');
+          await page.getByPlaceholder('Enter longitude...').click();
+          await page.getByPlaceholder('Enter longitude...').fill('16.630313');
+          await page.getByRole('button', { name: 'Add Waypoint' }).click();
+          await expect(page.getByRole('main')).toContainText('43.706270, 16.630313');
+
+          // Waypoint 2
+          await page.getByPlaceholder('Enter latitude...').click();
+          await page.getByPlaceholder('Enter latitude...').fill('43.706648');
+          await page.getByPlaceholder('Enter longitude...').click();
+          await page.getByPlaceholder('Enter longitude...').fill('16.630047');
+          await page.getByRole('button', { name: 'Add Waypoint' }).click();
+          await expect(page.getByText('Waypoint #2')).toBeVisible();
+          await expect(page.getByRole('main')).toContainText('43.706648, 16.630047');
+
+          //Waypoint 3
+          await page.getByPlaceholder('Enter latitude...').click();
+          await page.getByPlaceholder('Enter latitude...').fill('43.706373');
+          await page.getByPlaceholder('Enter longitude...').click();
+          await page.getByPlaceholder('Enter longitude...').fill('16.629951');
+          await page.getByRole('button', { name: 'Add Waypoint' }).click();
+
+          await expect(page.getByRole('main')).toContainText('Waypoint #143.706270, 16.630313TakeOffAUTOMoveToPositionAUTO+ Add Custom Task');
+          await expect(page.getByRole('main')).toContainText('Waypoint #343.706373, 16.629951LandAUTO+ Add Custom Task');
+}
+
+export async function deleteMission(page: Page) {
+    await loginAsAdmin(page);
+    await page.getByRole('button', { name: 'All Missions' }).first().click();
+    await page.getByRole('textbox', { name: 'Search missions by name,' }).click();
+    await page.getByRole('textbox', { name: 'Search missions by name,' }).fill('Operation Skywatch');
+    await expect(page.getByRole('heading', { name: 'Operation Skywatch' })).toBeVisible();
+
+    page.once('dialog', dialog => {
+    console.log(`Dialog message: ${dialog.message()}`);
+    dialog.accept();
+    });
+    await page.getByRole('button').filter({ hasText: /^$/ }).click();
+    await expect(page.getByRole('heading', { name: 'Operation Skywatch' })).not.toBeVisible();
+}
+
+export async function addAirportWaypoint(page: Page) {
+    await page.getByPlaceholder('Enter latitude...').click();
+    await page.getByPlaceholder('Enter latitude...').fill('45.755618');
+    await page.getByPlaceholder('Enter longitude...').click();
+    await page.getByPlaceholder('Enter longitude...').fill('16.089140');
+    await page.getByRole('button', { name: 'Add Waypoint' }).click();
+    await page.getByPlaceholder('Enter latitude...').click();
+    await page.getByPlaceholder('Enter latitude...').fill('45.755913');
+    await page.getByPlaceholder('Enter longitude...').click();
+    await page.getByPlaceholder('Enter longitude...').fill('16.087085');
+    await page.getByRole('button', { name: 'Add Waypoint' }).click();
+}
+
+export async function addDefaultWaypoints(page:Page){
+          // Waypoint 1
+      await page.getByPlaceholder('Enter latitude...').click();
+      await page.getByPlaceholder('Enter latitude...').fill('43.706270');
+      await page.getByPlaceholder('Enter longitude...').click();
+      await page.getByPlaceholder('Enter longitude...').fill('16.630313');
+      await page.getByRole('button', { name: 'Add Waypoint' }).click();
+      await expect(page.getByRole('main')).toContainText('43.706270, 16.630313');
+
+      // Waypoint 2
+      await page.getByPlaceholder('Enter latitude...').click();
+      await page.getByPlaceholder('Enter latitude...').fill('43.706648');
+      await page.getByPlaceholder('Enter longitude...').click();
+      await page.getByPlaceholder('Enter longitude...').fill('16.630047');
+      await page.getByRole('button', { name: 'Add Waypoint' }).click();
+      await expect(page.getByText('Waypoint #2')).toBeVisible();
+      await expect(page.getByRole('main')).toContainText('43.706648, 16.630047');
 }

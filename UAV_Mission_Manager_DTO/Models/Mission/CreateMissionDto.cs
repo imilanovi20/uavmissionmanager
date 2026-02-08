@@ -42,7 +42,7 @@ namespace UAV_Mission_Manager_DTO.Models.Mission
         public bool IsRecordingPermissionRequired { get; set; }
         public bool CrossesAirspace { get; set; }
         public string CrossesAirspaceMessage { get; set; }
-        public List<AirspaceViolationDto> Violations { get; set; }
+        public List<AirspaceViolationDto>? Violations { get; set; }
     }
 
     public class FlightTimeDataDto
@@ -62,11 +62,11 @@ namespace UAV_Mission_Manager_DTO.Models.Mission
     public class AirspaceViolationDto
     {
         public string AirportName { get; set; }
-        public string Code { get; set; }
+        public string? Code { get; set; }
         public decimal Distance { get; set; }
         public double Lat { get; set; }
         public double Lng { get; set; }
-        public string ViolationType { get; set; }
+        public string? ViolationType { get; set; }
     }
 
     public class OptimalRouteDto
