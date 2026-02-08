@@ -47,7 +47,6 @@ namespace UAV_Mission_Manager_BAL.Services.TaskService
             int updatedFormationOrder = currentFormationOrder;
             if (task.Type == TaskType.ChangeFormation)
             {
-                Console.WriteLine($"JSON Parameters: {dto.Parameters}");
 
                 var formationDto = JsonSerializer.Deserialize<CreateFormationDto>(
                     dto.Parameters,
@@ -194,6 +193,7 @@ namespace UAV_Mission_Manager_BAL.Services.TaskService
 
         private async Task ValidateTaskAsync(CreateTaskDto dto)
         {
+            /*
             if (dto.TaskType == "ExecuteCommand")
             {
                 if (string.IsNullOrWhiteSpace(dto.Parameters))
@@ -238,6 +238,7 @@ namespace UAV_Mission_Manager_BAL.Services.TaskService
                     throw new ArgumentException("Invalid Parameters JSON format");
                 }
             }
+            */
 
             if (dto.TaskType == "ChangeFormation")
             {

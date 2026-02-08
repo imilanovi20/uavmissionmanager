@@ -202,7 +202,7 @@ namespace UAV_Mission_Manager_BAL.Services.MissionService
                 FlightTimeUAV = createMissionDto.FlightTimeData != null
                     ? JsonSerializer.Serialize(createMissionDto.FlightTimeData)
                     : null,
-                Violations = createMissionDto.PermitData?.Violations != null
+                Violations = createMissionDto.PermitData?.Violations != null && createMissionDto.PermitData.Violations.Any()
                     ? JsonSerializer.Serialize(createMissionDto.PermitData.Violations)
                     : null,
                 OptimalRoute = createMissionDto.OptimalRoute != null

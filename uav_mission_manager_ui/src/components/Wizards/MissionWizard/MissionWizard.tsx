@@ -4,46 +4,46 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { useUAV } from "../../../hooks/useUAVs";
 import { useUsers } from "../../../hooks/useUsers";
-import { 
-  STEPS, 
-  type FormationData, 
-  type GeneralInfoData, 
-  type ResponsiblePersonsData, 
-  type UAVSelectionData, 
-  type WaypointsData,
-  type WeatherPermitsData
+import {
+    STEPS,
+    type FormationData,
+    type GeneralInfoData,
+    type ResponsiblePersonsData,
+    type UAVSelectionData,
+    type WaypointsData,
+    type WeatherPermitsData
 } from "./MissionWizard.types";
-import type { ObstacleDto,  RouteOptimizationData } from "../../../types/pathPlanning.types";
+import type { ObstacleDto, RouteOptimizationData } from "../../../types/pathPlanning.types";
 import type { AirspaceViolationDto, CreateMissionDto, FlightTimeDataDto, OptimalRouteDto, PermitDataDto } from "../../../types/mission.types";
 import { missionService } from "../../../services/mission.service";
 import type { CreateFormationDto } from "../../../types/formation.types";
-import { 
-  FormationStep, 
-  GeneralInfoStep, 
-  ResponsiblePersonsStep, 
-  SummaryStep, 
-  UAVSelectionStep, 
-  WaypointsStep,
-  RouteOptimizationStep,
-  WeatherPermitsStep
+import {
+    FormationStep,
+    GeneralInfoStep,
+    ResponsiblePersonsStep,
+    SummaryStep,
+    UAVSelectionStep,
+    WaypointsStep,
+    RouteOptimizationStep,
+    WeatherPermitsStep
 } from "./MissionWizardSteps";
-import { 
-  Step, 
-  StepIndicator, 
-  StepLabel, 
-  WizardBody,  
-  WizardHeader, 
-  WizardTitle, 
-  SecondaryButton, 
-  WizardFooter, 
-  ButtonGroup, 
-  PrimaryButton, 
-  WizardContainer,
-  WizardPageContainer,
-  QuitButton
+import {
+    Step,
+    StepIndicator,
+    StepLabel,
+    WizardBody,
+    WizardHeader,
+    WizardTitle,
+    SecondaryButton,
+    WizardFooter,
+    ButtonGroup,
+    PrimaryButton,
+    WizardContainer,
+    WizardPageContainer,
+    QuitButton
 } from "./MissionWizard.styles";
 import { useCurrentUser } from "../../../hooks/useCurrentUser";
-import type {  CreateWeatherDataDto } from "../../../types/weather.types";
+import type { CreateWeatherDataDto } from "../../../types/weather.types";
 
 const MissionWizard = () => {
     const navigate = useNavigate();
@@ -102,14 +102,12 @@ const MissionWizard = () => {
         permitsError: null
     });
 
-    // Sync UAVs when loaded
     useEffect(() => {
         if (uavs && uavs.length > 0) {
             setUAVSelection(prev => ({ ...prev, availableUAVs: uavs }));
         }
     }, [uavs]);
 
-    // Sync Users when loaded
     useEffect(() => {
         if (users && users.length > 0) {
             setResponsiblePersons(prev => ({ ...prev, availableUsers: users }));
@@ -132,14 +130,10 @@ const MissionWizard = () => {
         navigate('/missions');
     };
 
-
     const handleSubmit = async () => {
-        console.time(' Total Mission Creation');
-
         try {
             setLoading(true);
 
-            // Priprema podataka (brzo)
             const weatherData: CreateWeatherDataDto = {
                 temperature: weatherPermits.weather?.temperature || 0,
                 windSpeed: weatherPermits.weather?.windSpeed || 0,
@@ -190,12 +184,33 @@ const MissionWizard = () => {
             };
 
             const finalWaypoints = routeOptimization.optimalRoute
-                ? routeOptimization.optimalRoute.optimizedRoute.map(point => ({
-                    latitude: point.lat,
-                    longitude: point.lng,
-                    orderIndex: point.order
-                }))
+                ? routeOptimization.optimalRoute.optimizedRoute.map(point => {
+                    const originalWaypoint = waypointsData.waypoints.find(
+                        wp => Math.abs(wp.latitude - point.lat) < 0.0001 &&
+                            Math.abs(wp.longitude - point.lng) < 0.0001
+                    );
+                    return {
+                        latitude: point.lat,
+                        longitude: point.lng,
+                        orderIndex: point.order,
+                        tasks: originalWaypoint?.tasks || []
+                    };
+                })
                 : waypointsData.waypoints;
+
+                const waypointsWithStringifiedParams = waypointsData.waypoints.map(waypoint => ({
+                    latitude: waypoint.latitude,
+                    longitude: waypoint.longitude,
+                    orderIndex: waypoint.orderIndex,
+                    tasks: waypoint.tasks?.map(task => ({
+                        taskType: task.type || task.type,
+                        order: task.order,
+                        uavId: task.uavId || null,
+                        parameters: typeof task.parameters === 'string'
+                            ? task.parameters
+                            : JSON.stringify(task.parameters)
+                    })) || []
+                }));
 
             const missionData: CreateMissionDto = {
                 name: generalInfo.name,
@@ -210,32 +225,22 @@ const MissionWizard = () => {
                 uavIds: uavSelection.selectedUAVIds,
                 responsibleUsers: responsiblePersons.selectedUsernames,
                 initialFormation: formationDto,
-                waypoints: finalWaypoints
+                waypoints: waypointsWithStringifiedParams
             };
 
-            console.log(' Submitting Mission Data:', missionData);
+            await missionService.createMission(missionData);
 
-            //  OPTIMIZED: API call sa error handlingom
-            const response = await missionService.createMission(missionData);
-
-            console.timeEnd(' Total Mission Creation');
-            console.log(' Mission created successfully:', response);
-
-            //  Kratko èekanje da korisnik vidi feedback
             await new Promise(resolve => setTimeout(resolve, 500));
 
             navigate('/missions');
 
         } catch (error: any) {
-            console.timeEnd(' Total Mission Creation');
-            console.error(' Failed to create mission:', error);
-
             const errorMessage = error.response?.data?.message
                 || error.response?.data
                 || error.message
                 || 'Failed to create mission';
 
-            alert(`Failed to create mission: ${errorMessage}`);
+            alert(`Failed to create mission: ${JSON.stringify(errorMessage)}`);
         } finally {
             setLoading(false);
         }
@@ -243,21 +248,21 @@ const MissionWizard = () => {
 
     const canProceed = () => {
         switch (currentStep) {
-            case 0: // General Info
+            case 0:
                 return generalInfo.name && generalInfo.date && generalInfo.description;
-            case 1: // UAV Selection
+            case 1:
                 return uavSelection.selectedUAVIds.length > 0;
-            case 2: // Formation
+            case 2:
                 return formation.formationType;
-            case 3: // Responsible Persons
+            case 3:
                 return responsiblePersons.selectedUsernames.length > 0;
-            case 4: // Waypoints
+            case 4:
                 return waypointsData.waypoints.length >= 2;
-            case 5: // Route Optimization
+            case 5:
                 return true;
-            case 6: // Weather & Permits
+            case 6:
                 return true;
-            case 7: // Summary
+            case 7:
                 return true;
             default:
                 return false;
@@ -270,7 +275,7 @@ const MissionWizard = () => {
                 return (
                     <GeneralInfoStep
                         data={generalInfo}
-                        onUpdate={(update: SetStateAction<GeneralInfoData>) => 
+                        onUpdate={(update: SetStateAction<GeneralInfoData>) =>
                             setGeneralInfo({ ...generalInfo, ...update })
                         }
                     />
@@ -279,7 +284,7 @@ const MissionWizard = () => {
                 return (
                     <UAVSelectionStep
                         data={uavSelection}
-                        onUpdate={(update: SetStateAction<UAVSelectionData>) => 
+                        onUpdate={(update: SetStateAction<UAVSelectionData>) =>
                             setUAVSelection({ ...uavSelection, ...update })
                         }
                     />
@@ -292,7 +297,7 @@ const MissionWizard = () => {
                 return (
                     <FormationStep
                         data={formation}
-                        selectedUAVs={selectedUAVs}  
+                        selectedUAVs={selectedUAVs}
                         onUpdate={(update) => setFormation({ ...formation, ...update })}
                     />
                 );
@@ -300,7 +305,7 @@ const MissionWizard = () => {
                 return (
                     <ResponsiblePersonsStep
                         data={responsiblePersons}
-                        onUpdate={(update) => 
+                        onUpdate={(update) =>
                             setResponsiblePersons({ ...responsiblePersons, ...update })
                         }
                     />
@@ -322,13 +327,12 @@ const MissionWizard = () => {
                     <RouteOptimizationStep
                         data={routeOptimization}
                         waypoints={waypointsData.waypoints}
-                        onUpdate={(update) => 
+                        onUpdate={(update) =>
                             setRouteOptimization({ ...routeOptimization, ...update })
                         }
                     />
                 );
             case 6:
-                // Get route points (optimized or original waypoints)
                 const routePoints = routeOptimization.optimalRoute
                     ? routeOptimization.optimalRoute.optimizedRoute
                     : waypointsData.waypoints.map((wp, index) => ({
@@ -337,13 +341,12 @@ const MissionWizard = () => {
                         lng: wp.longitude
                     }));
 
-                // Collect all tasks from all waypoints
                 const allTasks = waypointsData.waypoints.flatMap(wp => wp.tasks);
 
                 return (
                     <WeatherPermitsStep
                         data={weatherPermits}
-                        onUpdate={(update) => 
+                        onUpdate={(update) =>
                             setWeatherPermits({ ...weatherPermits, ...update })
                         }
                         missionDate={generalInfo.date}
@@ -353,17 +356,24 @@ const MissionWizard = () => {
                     />
                 );
             case 7:
+                const cleanedWeatherPermits = weatherPermits.airspaceCheck ? {
+                    ...weatherPermits,
+                    airspaceCheck: {
+                        ...weatherPermits.airspaceCheck,
+                        violations: null
+                    }
+                } : weatherPermits;
                 return (
                     <SummaryStep
-                        data={{}}  // Empty data prop to satisfy StepProps
-                        onUpdate={() => {}}  // Empty onUpdate to satisfy StepProps
+                        data={{}}
+                        onUpdate={() => { }}
                         generalInfo={generalInfo}
                         uavSelection={uavSelection}
                         formation={formation}
                         responsiblePersons={responsiblePersons}
                         waypointsData={waypointsData}
                         routeOptimization={routeOptimization}
-                        weatherPermits={weatherPermits}
+                        weatherPermits={cleanedWeatherPermits}
                     />
                 );
             default:

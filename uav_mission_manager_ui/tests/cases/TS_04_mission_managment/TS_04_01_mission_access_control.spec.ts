@@ -1,8 +1,8 @@
 import { test, expect } from '@playwright/test';
 import { loginAsAdmin, loginAsUser } from '../helpers/auth';
-import { addGeneralInfo, addInitialFormation, addUAVs } from '../helpers/wizard_data';
+import { addDefaultWaypoints, addGeneralInfo, addInitialFormation, addUAVs } from '../helpers/wizard_data';
 
-test.describe.serial('TS 04 Mission Management', () => {
+test.describe.serial('TS 04 Mission Management 01 Mission Access Control', () => {
   const screenshotsPath = 'tests/screenshots/TS_04_mission_management/';
 
   test.afterEach(async ({ page }) => {
@@ -65,23 +65,7 @@ test.describe.serial('TS 04 Mission Management', () => {
 
     await test.step('Add waypoints', async () => {
       await expect(page.getByText('New MissionQuitStep 5 of 8:')).toBeVisible();
-
-      // Waypoint 1
-      await page.getByPlaceholder('Enter latitude...').click();
-      await page.getByPlaceholder('Enter latitude...').fill('43.706270');
-      await page.getByPlaceholder('Enter longitude...').click();
-      await page.getByPlaceholder('Enter longitude...').fill('16.630313');
-      await page.getByRole('button', { name: 'Add Waypoint' }).click();
-      await expect(page.getByRole('main')).toContainText('43.706270, 16.630313');
-
-      // Waypoint 2
-      await page.getByPlaceholder('Enter latitude...').click();
-      await page.getByPlaceholder('Enter latitude...').fill('43.706648');
-      await page.getByPlaceholder('Enter longitude...').click();
-      await page.getByPlaceholder('Enter longitude...').fill('16.630047');
-      await page.getByRole('button', { name: 'Add Waypoint' }).click();
-      await expect(page.getByText('Waypoint #2')).toBeVisible();
-      await expect(page.getByRole('main')).toContainText('43.706648, 16.630047');
+      await addDefaultWaypoints(page);
 
       await page.screenshot({ path: screenshotsPath + 'TC_01/wizard_waypoints.png' });
       await page.getByRole('button', { name: 'Next' }).click();
@@ -89,16 +73,6 @@ test.describe.serial('TS 04 Mission Management', () => {
 
     await test.step('Detect obstacles and generate optimal route', async () => {
       await expect(page.getByText('New MissionQuitStep 6 of 8:')).toBeVisible();
-      /*
-      await page.getByRole('checkbox', { name: '🏢 Buildings' }).check();
-      await page.getByRole('button', { name: 'Detect Obstacles' }).click();
-      await expect(page.getByRole('heading', { name: /Detected Obstacles \(\d+\)/ })).toBeVisible();
-      await page.getByRole('button', { name: 'Generate Optimal Route' }).click();
-
-      await page.waitForLoadState('networkidle', { timeout: 30000 });
-
-      await expect(page.getByRole('main')).toContainText('Detected Obstacles');
-      */
       
       await page.screenshot({ path: screenshotsPath + 'TC_01/wizard_obstacles.png' });
       await page.getByRole('button', { name: 'Next' }).click();
@@ -183,23 +157,7 @@ test.describe.serial('TS 04 Mission Management', () => {
 
     await test.step('Add waypoints', async () => {
       await expect(page.getByText('New MissionQuitStep 5 of 8:')).toBeVisible();
-
-      // Waypoint 1
-      await page.getByPlaceholder('Enter latitude...').click();
-      await page.getByPlaceholder('Enter latitude...').fill('43.706270');
-      await page.getByPlaceholder('Enter longitude...').click();
-      await page.getByPlaceholder('Enter longitude...').fill('16.630313');
-      await page.getByRole('button', { name: 'Add Waypoint' }).click();
-      await expect(page.getByRole('main')).toContainText('43.706270, 16.630313');
-
-      // Waypoint 2
-      await page.getByPlaceholder('Enter latitude...').click();
-      await page.getByPlaceholder('Enter latitude...').fill('43.706648');
-      await page.getByPlaceholder('Enter longitude...').click();
-      await page.getByPlaceholder('Enter longitude...').fill('16.630047');
-      await page.getByRole('button', { name: 'Add Waypoint' }).click();
-      await expect(page.getByText('Waypoint #2')).toBeVisible();
-      await expect(page.getByRole('main')).toContainText('43.706648, 16.630047');
+      await addDefaultWaypoints(page);
 
       await page.screenshot({ path: screenshotsPath + 'TC_02/wizard_waypoints.png' });
       await page.getByRole('button', { name: 'Next' }).click();
@@ -207,16 +165,6 @@ test.describe.serial('TS 04 Mission Management', () => {
 
     await test.step('Detect obstacles and generate optimal route', async () => {
       await expect(page.getByText('New MissionQuitStep 6 of 8:')).toBeVisible();
-      /*
-      await page.getByRole('checkbox', { name: '🏢 Buildings' }).check();
-      await page.getByRole('button', { name: 'Detect Obstacles' }).click();
-      await expect(page.getByRole('heading', { name: /Detected Obstacles \(\d+\)/ })).toBeVisible();
-      await page.getByRole('button', { name: 'Generate Optimal Route' }).click();
-
-      await page.waitForLoadState('networkidle', { timeout: 30000 });
-
-      await expect(page.getByRole('main')).toContainText('Detected Obstacles');
-      */
       
       await page.screenshot({ path: screenshotsPath + 'TC_02/wizard_obstacles.png' });
       await page.getByRole('button', { name: 'Next' }).click();
@@ -301,23 +249,7 @@ test.describe.serial('TS 04 Mission Management', () => {
 
     await test.step('Add waypoints', async () => {
       await expect(page.getByText('New MissionQuitStep 5 of 8:')).toBeVisible();
-
-      // Waypoint 1
-      await page.getByPlaceholder('Enter latitude...').click();
-      await page.getByPlaceholder('Enter latitude...').fill('43.706270');
-      await page.getByPlaceholder('Enter longitude...').click();
-      await page.getByPlaceholder('Enter longitude...').fill('16.630313');
-      await page.getByRole('button', { name: 'Add Waypoint' }).click();
-      await expect(page.getByRole('main')).toContainText('43.706270, 16.630313');
-
-      // Waypoint 2
-      await page.getByPlaceholder('Enter latitude...').click();
-      await page.getByPlaceholder('Enter latitude...').fill('43.706648');
-      await page.getByPlaceholder('Enter longitude...').click();
-      await page.getByPlaceholder('Enter longitude...').fill('16.630047');
-      await page.getByRole('button', { name: 'Add Waypoint' }).click();
-      await expect(page.getByText('Waypoint #2')).toBeVisible();
-      await expect(page.getByRole('main')).toContainText('43.706648, 16.630047');
+      await addDefaultWaypoints(page);
 
       await page.screenshot({ path: screenshotsPath + 'TC_03/wizard_waypoints.png' });
       await page.getByRole('button', { name: 'Next' }).click();
@@ -325,16 +257,6 @@ test.describe.serial('TS 04 Mission Management', () => {
 
     await test.step('Detect obstacles and generate optimal route', async () => {
       await expect(page.getByText('New MissionQuitStep 6 of 8:')).toBeVisible();
-      /*
-      await page.getByRole('checkbox', { name: '🏢 Buildings' }).check();
-      await page.getByRole('button', { name: 'Detect Obstacles' }).click();
-      await expect(page.getByRole('heading', { name: /Detected Obstacles \(\d+\)/ })).toBeVisible();
-      await page.getByRole('button', { name: 'Generate Optimal Route' }).click();
-
-      await page.waitForLoadState('networkidle', { timeout: 30000 });
-
-      await expect(page.getByRole('main')).toContainText('Detected Obstacles');
-      */
       
       await page.screenshot({ path: screenshotsPath + 'TC_03/wizard_obstacles.png' });
       await page.getByRole('button', { name: 'Next' }).click();
@@ -419,23 +341,7 @@ test.describe.serial('TS 04 Mission Management', () => {
 
     await test.step('Add waypoints', async () => {
       await expect(page.getByText('New MissionQuitStep 5 of 8:')).toBeVisible();
-
-      // Waypoint 1
-      await page.getByPlaceholder('Enter latitude...').click();
-      await page.getByPlaceholder('Enter latitude...').fill('43.706270');
-      await page.getByPlaceholder('Enter longitude...').click();
-      await page.getByPlaceholder('Enter longitude...').fill('16.630313');
-      await page.getByRole('button', { name: 'Add Waypoint' }).click();
-      await expect(page.getByRole('main')).toContainText('43.706270, 16.630313');
-
-      // Waypoint 2
-      await page.getByPlaceholder('Enter latitude...').click();
-      await page.getByPlaceholder('Enter latitude...').fill('43.706648');
-      await page.getByPlaceholder('Enter longitude...').click();
-      await page.getByPlaceholder('Enter longitude...').fill('16.630047');
-      await page.getByRole('button', { name: 'Add Waypoint' }).click();
-      await expect(page.getByText('Waypoint #2')).toBeVisible();
-      await expect(page.getByRole('main')).toContainText('43.706648, 16.630047');
+      await addDefaultWaypoints(page);
 
       await page.screenshot({ path: screenshotsPath + 'TC_04/wizard_waypoints.png' });
       await page.getByRole('button', { name: 'Next' }).click();
@@ -443,16 +349,6 @@ test.describe.serial('TS 04 Mission Management', () => {
 
     await test.step('Detect obstacles and generate optimal route', async () => {
       await expect(page.getByText('New MissionQuitStep 6 of 8:')).toBeVisible();
-      /*
-      await page.getByRole('checkbox', { name: '🏢 Buildings' }).check();
-      await page.getByRole('button', { name: 'Detect Obstacles' }).click();
-      await expect(page.getByRole('heading', { name: /Detected Obstacles \(\d+\)/ })).toBeVisible();
-      await page.getByRole('button', { name: 'Generate Optimal Route' }).click();
-
-      await page.waitForLoadState('networkidle', { timeout: 30000 });
-
-      await expect(page.getByRole('main')).toContainText('Detected Obstacles');
-      */
       
       await page.screenshot({ path: screenshotsPath + 'TC_04/wizard_obstacles.png' });
       await page.getByRole('button', { name: 'Next' }).click();
