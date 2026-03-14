@@ -366,3 +366,4 @@ FodyWeavers.xsd
 /playwright-report/
 /playwright/.cache/
 /tests/screenshots/
+appsettings.json
